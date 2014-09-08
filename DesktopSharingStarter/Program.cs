@@ -1,0 +1,52 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Configuration.Install;
+using System.Linq;
+using System.Reflection;
+using System.ServiceProcess;
+using System.Text;
+
+
+namespace DesktopSharingStarter
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            var ServicesToRun = new List<ServiceBase>();
+            ServicesToRun.Add(new Client_Service.Service1(new DesktopSharing_Server.ScreenCaptureService()));
+
+
+            //if started by a user
+            if(Environment.UserInteractive)
+            {
+#if DEBUG
+                //if in debug mode, just run normally as a service
+                WindowsService.Interactive.Run(ServicesToRun.ToArray());
+#else
+                //otherwise, install the application
+                var par = string.Concat(args);
+                switch(par)
+                {
+                    case "--install":
+                        ManagedInstallerClass.InstallHelper(new string[] { Assembly.GetExecutingAssembly().Location });
+                        break;
+                    case "--uninstall":
+                        ManagedInstallerClass.InstallHelper(new string[] { "/u", Assembly.GetExecutingAssembly().Location });
+                        break;
+                    default:
+                        Console.Error.WriteLine("Insvalid Paramters!");
+                        break;
+                }
+#endif
+
+            } else
+            {
+
+                ServiceBase.Run(ServicesToRun.ToArray());
+
+
+            }
+        }
+    }
+}
