@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("DesktopSharingService")]
+[assembly: AssemblyTitle("DesktopSharing_Viewer")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("DesktopSharingService")]
+[assembly: AssemblyProduct("DesktopSharing_Viewer")]
 [assembly: AssemblyCopyright("Copyright ©  2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("c7fe92cb-3600-4014-bef8-89f50b4efd96")]
+[assembly: Guid("99192d3e-0ff2-483b-84d7-8bddd888b9d3")]
 
 // Version information for an assembly consists of the following four values:
 //

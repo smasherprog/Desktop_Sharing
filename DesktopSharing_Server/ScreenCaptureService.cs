@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pipes;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -19,9 +20,19 @@ namespace DesktopSharing_Server
         Status Running = Status.Stopped;
 
         UdpClient mytcpl;
+        Receiver pipe = new Receiver();
+
         public ScreenCaptureService()
         {
             _Network_Thread = null;
+            pipe.Data += new DesktopService_API.DataIsReady(DataBeingRecieved);
+            if(pipe.ServiceOn() == false)
+                MessageBox.Show(pipe.error.Message);
+        }
+        string DataBeingRecieved(string data)
+        {
+            Debug.WriteLine(data);
+            return "";
         }
         public void OnStart()
         {
@@ -29,6 +40,7 @@ namespace DesktopSharing_Server
             Running = Status.Starting;
             _Network_Thread = new System.Threading.Thread(new System.Threading.ThreadStart(RunNetwork));
             _Network_Thread.Start();
+
         }
         public void OnStop()
         {
@@ -78,7 +90,7 @@ namespace DesktopSharing_Server
                         using(var img = ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height)))
                         {
                             img.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
-                            mytcpl.Send(ms.ToArray(), (int)ms.Length);
+                           // mytcpl.Send(ms.ToArray(), (int)ms.Length);
                         }
                     }
 

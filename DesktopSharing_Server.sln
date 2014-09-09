@@ -1,15 +1,20 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.30501.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopSharing_Server", "DesktopSharing_Server\DesktopSharing_Server.csproj", "{F1B0F688-0745-4F46-B06D-30392C625444}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopSharingStarter", "DesktopSharingStarter\DesktopSharingStarter.csproj", "{6E417B2C-F606-4193-9361-FCD1E11DF410}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopSharingService", "DesktopSharingStarter\DesktopSharingService.csproj", "{6E417B2C-F606-4193-9361-FCD1E11DF410}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SSLTcp", "SSLTcp\SSLTcp.csproj", "{A16D46D3-C103-4C9B-84DA-17DCFD29F9E6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Key_Generator", "Key_Generator\Key_Generator.csproj", "{CD1B3B4A-F4F8-4728-A0E9-EADD1BC7A977}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pipes", "Pipes\Pipes.csproj", "{982892A9-3967-44D3-8EED-88C30ABE2EF1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopSharing_Viewer", "DesktopSharing_Viewer\DesktopSharing_Viewer.csproj", "{C3C16211-85E0-4BF7-9DB0-5EA6CC1BA79C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server_System_Tray", "Server_System_Tray\Server_System_Tray.csproj", "{8BC9CFA1-EB3B-4C77-B4BB-C097A37B5C21}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +38,18 @@ Global
 		{CD1B3B4A-F4F8-4728-A0E9-EADD1BC7A977}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CD1B3B4A-F4F8-4728-A0E9-EADD1BC7A977}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CD1B3B4A-F4F8-4728-A0E9-EADD1BC7A977}.Release|Any CPU.Build.0 = Release|Any CPU
+		{982892A9-3967-44D3-8EED-88C30ABE2EF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{982892A9-3967-44D3-8EED-88C30ABE2EF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{982892A9-3967-44D3-8EED-88C30ABE2EF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{982892A9-3967-44D3-8EED-88C30ABE2EF1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3C16211-85E0-4BF7-9DB0-5EA6CC1BA79C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3C16211-85E0-4BF7-9DB0-5EA6CC1BA79C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3C16211-85E0-4BF7-9DB0-5EA6CC1BA79C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3C16211-85E0-4BF7-9DB0-5EA6CC1BA79C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BC9CFA1-EB3B-4C77-B4BB-C097A37B5C21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BC9CFA1-EB3B-4C77-B4BB-C097A37B5C21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BC9CFA1-EB3B-4C77-B4BB-C097A37B5C21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BC9CFA1-EB3B-4C77-B4BB-C097A37B5C21}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
