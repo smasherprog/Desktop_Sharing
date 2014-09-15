@@ -20,7 +20,7 @@ namespace DesktopSharing_Server
         enum Status { Starting, Running, Stopped, ShuttingDown }
         System.Threading.Thread _Network_Thread;
         Status Running = Status.Stopped;
-
+        Bitmap _LastImage = null;
         //Receiver pipe = new Receiver();
 
         public ScreenCaptureService()
@@ -70,7 +70,7 @@ namespace DesktopSharing_Server
             Running = Status.Running;
             ImageCodecInfo jgpEncoder = GetEncoder(ImageFormat.Jpeg);
             var myEncoderParameters = new EncoderParameters(1);
-            var myEncoder =System.Drawing.Imaging.Encoder.Quality;
+            var myEncoder = System.Drawing.Imaging.Encoder.Quality;
             var myEncoderParameter = new EncoderParameter(myEncoder, 60L);
             myEncoderParameters.Param[0] = myEncoderParameter;
 
@@ -109,16 +109,46 @@ namespace DesktopSharing_Server
 
                         try
                         {
-                            using(var ms = new MemoryStream())
+
+                            var img = Desktop_Sharing_Shared.ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
+                            if(_LastImage == null)
                             {
-                                using(var img = ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height)))
+                                Debug.WriteLine("Sending " + (int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE);
+                                var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE);
+                                using(var memorys = new MemoryStream())
+                                {
+                                    img.Save(memorys, jgpEncoder, myEncoderParameters);
+                                    ms.Add_Block(memorys.ToArray());
+                                }
+                                Debug.WriteLine("Sending image to client");
+                                client.Encrypt_And_Send(ms);
+                            } 
+                            else
+                            {
+                                Debug.WriteLine("Sending " + (int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION);
+                                var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION);
+
+                                var rect = Desktop_Sharing_Shared.Bitmap_Helper.Get_Diff(_LastImage, img);
+                                if(rect.Width > 0 && rect.Height > 0)
                                 {
                                    
-                                    img.Save(ms, jgpEncoder, myEncoderParameters);
-                                    Debug.WriteLine("Sending image to client");
-                                    client.Encrypt_And_Send(ms.ToArray());
+                                    using(var updateregion = img.Clone(rect, img.PixelFormat))
+                                    {
+                                        ms.Add_Block(BitConverter.GetBytes(rect.Top));
+                                        ms.Add_Block(BitConverter.GetBytes(rect.Left));
+                                        using(var memorys = new MemoryStream())
+                                        {
+                                            updateregion.Save(memorys, jgpEncoder, myEncoderParameters);
+                                            ms.Add_Block(memorys.ToArray());
+                                        }
+                                        Debug.WriteLine("Sending image to client");
+                                        client.Encrypt_And_Send(ms);
+                                    }
                                 }
+
+                                _LastImage.Dispose();
                             }
+                            _LastImage = img;
 
 
                         } catch(Exception e)

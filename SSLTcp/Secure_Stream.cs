@@ -8,7 +8,8 @@ using System.Text;
 
 namespace SecureTcp
 {
-    public class Secure_Stream: IDisposable
+
+    public class Secure_Stream : IDisposable
     {
         public TcpClient Client;
         byte[] _MySessionKey;
@@ -27,16 +28,16 @@ namespace SecureTcp
                 Client.Close();
             Client = null;
         }
-        public void Encrypt_And_Send(byte[] data)
+        public void Encrypt_And_Send(Tcp_Message m)
         {
-            Write(data, Client.GetStream());
+            Write(m, Client.GetStream());
         }
-        public byte[] Read_And_Unencrypt()
+        public Tcp_Message Read_And_Unencrypt()
         {
             return Read(Client.GetStream());
         }
 
-        protected void Write(byte[] data, NetworkStream stream)
+        protected void Write(Tcp_Message m, NetworkStream stream)
         {
             try
             {
@@ -52,10 +53,10 @@ namespace SecureTcp
                     stream.Write(iv, 0, iv.Length);
                     using(ICryptoTransform encrypt = aes.CreateEncryptor())
                     {
-                        var encryptedbytes = encrypt.TransformFinalBlock(data, 0, data.Length);
-                        var len = BitConverter.GetBytes(encryptedbytes.Length);
-               
-                        stream.Write(len, 0, len.Length);
+                        var sendbuffer= Tcp_Message.ToBuffer(m);
+                        var encryptedbytes = encrypt.TransformFinalBlock(sendbuffer, 0, sendbuffer.Length);
+
+                        stream.Write(BitConverter.GetBytes(encryptedbytes.Length), 0, 4);
                         stream.Write(encryptedbytes, 0, encryptedbytes.Length);
                     }
                 }
@@ -64,7 +65,7 @@ namespace SecureTcp
                 Debug.WriteLine(e.Message);
             }
         }
-        protected byte[] Read(NetworkStream stream)
+        protected Tcp_Message Read(NetworkStream stream)
         {
             try
             {
@@ -83,7 +84,7 @@ namespace SecureTcp
                         aes.IV = iv;
                         aes.Mode = CipherMode.CBC;
                         aes.Padding = PaddingMode.PKCS7;
-                        
+
                         int readbytes = 0;
                         while(readbytes < len)
                         {
@@ -91,16 +92,19 @@ namespace SecureTcp
                         }
                         using(ICryptoTransform decrypt = aes.CreateDecryptor())
                         {
-                
-                            return decrypt.TransformFinalBlock(_Buffer, 0, len);
+                            var arrybuf = decrypt.TransformFinalBlock(_Buffer, 0, len);
+                            return Tcp_Message.FromBuffer(arrybuf);
+
                         }
                     }
-                }
+                } else
+                    return null;
             } catch(Exception e)
             {
                 Debug.WriteLine(e.Message);
+                return null;
             }
-            return new byte[0];
+
         }
     }
 }

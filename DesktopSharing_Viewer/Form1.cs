@@ -50,34 +50,63 @@ namespace DesktopSharing
             long bytecounter = 0;
             try
             {
-         
+
                 using(var server = SecureTcp.Secure_Tcp_Client.Connect(Directory.GetCurrentDirectory() + "\\publickey.xml", "127.0.0.1", 6000))
                 {
                     while(Running == Status.Running)
                     {
                         if(server.Client.Available > 0)
                         {
-                            using(var ms = new MemoryStream(server.Read_And_Unencrypt()))
-                            {
-                                if((DateTime.Now - _Timer).TotalMilliseconds > 1000)
-                                {
-                                    Debug.WriteLine(_Counter + " FPS Bytes received: " + bytecounter);
-                                    _Counter = 0;
-                                    _Timer = DateTime.Now;
-                                    bytecounter = 0;
-                                }
+                            var ms = server.Read_And_Unencrypt();
 
-                                _Counter += 1;
+                            if((DateTime.Now - _Timer).TotalMilliseconds > 1000)
+                            {
+                                Debug.WriteLine(_Counter + " FPS Bytes received: " + bytecounter);
+                                _Counter = 0;
+                                _Timer = DateTime.Now;
+                                bytecounter = 0;
+                            }
+                            _Counter += 1;
+
+                            Debug.WriteLine("Received " + ms.Type.ToString());
+                            if(ms.Type == (int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION)
+                            {
+                                var top = BitConverter.ToInt32(ms.Blocks[1], 0);
+                                var left = BitConverter.ToInt32(ms.Blocks[2], 0);
+                                Debug.WriteLine("got here");
+                                pictureBox1.Invoke((MethodInvoker)delegate
+                                {
+                                    try
+                                    {
+                                        using(var memo = new MemoryStream(ms.Blocks[3]))
+                                        using(var imgregion = Bitmap.FromStream(memo))
+                                        using(var g = Graphics.FromImage(pictureBox1.Image))
+                                        {
+                                            g.DrawImage(imgregion, new Point(left, top));
+                                            g.Flush();
+                                        }
+                                        pictureBox1.Invalidate();
+                                        Debug.WriteLine("Received update from server");
+
+                                    } catch(Exception e)
+                                    {
+                                        Debug.WriteLine(e.Message);
+                                    }
+                                });
+                            } else if(ms.Type == (int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE)
+                            {
                                 pictureBox1.Invoke((MethodInvoker)delegate
                                 {
                                     try
                                     {
                                         if(pictureBox1.Image != null)
                                             pictureBox1.Image.Dispose();
-                                        pictureBox1.Image = Image.FromStream(ms);
-                                        bytecounter += ms.Length;
+                                        using(var memo = new MemoryStream(ms.Blocks[1]))
+                                        {
+                                            pictureBox1.Image = Bitmap.FromStream(memo);
+                                        }
                                         Debug.WriteLine("Received image from server");
-                                        //pictureBox1.Image = ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
+
                                     } catch(Exception e)
                                     {
                                         Debug.WriteLine(e.Message);
@@ -85,16 +114,13 @@ namespace DesktopSharing
                                 });
                             }
                         }
-
                     }
 
                 }
-
             } catch(Exception e)
             {
                 Debug.WriteLine(e.Message);
             }
-
             Running = Status.Stopped;
         }
 
@@ -103,6 +129,6 @@ namespace DesktopSharing
             Running = Status.ShuttingDown;
         }
 
- 
+
     }
 }

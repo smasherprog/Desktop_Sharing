@@ -4,11 +4,10 @@ using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Windows.Forms;
 
-namespace DesktopSharing_Server
+namespace Desktop_Sharing_Shared
 {
-    static class ScreenCapture
+    public static class ScreenCapture
     {
         // P/Invoke declarations
         [DllImport("gdi32.dll")]

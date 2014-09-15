@@ -57,7 +57,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="ScreenCapture.cs" />
     <Compile Include="ScreenCaptureService.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -76,6 +75,10 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Desktop_Sharing_Shared\Desktop_Sharing_Shared.csproj">
+      <Project>{1b902504-63f4-4f38-9ec6-ead8c94a228e}</Project>
+      <Name>Desktop_Sharing_Shared</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Pipes\Pipes.csproj">
       <Project>{982892a9-3967-44d3-8eed-88c30abe2ef1}</Project>
       <Name>Pipes</Name>

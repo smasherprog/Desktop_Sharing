@@ -79,6 +79,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Desktop_Sharing_Shared\Desktop_Sharing_Shared.csproj">
+      <Project>{1b902504-63f4-4f38-9ec6-ead8c94a228e}</Project>
+      <Name>Desktop_Sharing_Shared</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SSLTcp\SecureTcp.csproj">
       <Project>{a16d46d3-c103-4c9b-84da-17dcfd29f9e6}</Project>
       <Name>SecureTcp</Name>
