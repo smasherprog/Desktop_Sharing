@@ -22,7 +22,8 @@ namespace Key_Generator
 
         private void button1_Click(object sender, EventArgs e)
         {
-            var RSA = new RSACryptoServiceProvider(Convert.ToInt32(comboBox1.SelectedValue));
+            var RSA = new RSACryptoServiceProvider(Convert.ToInt32(comboBox1.SelectedItem.ToString()));
+          
             var rootpath = textBox1.Text;
             if(!rootpath.EndsWith("\\"))rootpath+="\\";
             File.WriteAllText(rootpath + "publickey.xml", RSA.ToXmlString(false));
@@ -34,5 +35,6 @@ namespace Key_Generator
             folderBrowserDialog1.ShowDialog();
             textBox1.Text = folderBrowserDialog1.SelectedPath;
         }
+
     }
 }

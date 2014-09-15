@@ -21,7 +21,7 @@ namespace DesktopSharingStarter
             if(Environment.UserInteractive)
             {
 #if DEBUG
-                //if in debug mode, just run normally as a service
+                //if in debug mode, run the services as a non service application
                 WindowsService.Interactive.Run(ServicesToRun.ToArray());
 #else
                 //otherwise, install the application

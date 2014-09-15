@@ -24,18 +24,19 @@ namespace WindowsService
                 Console.WriteLine("Started");
             }
 
-            //MethodInfo onStopMethod = typeof(ServiceBase).GetMethod("OnStop",
-            //    BindingFlags.Instance | BindingFlags.NonPublic);
-            //foreach(ServiceBase service in servicesToRun)
-            //{
-            //    Console.WriteLine("Stopping {0}...", service.ServiceName);
-            //    onStopMethod.Invoke(service, null);
-            //    Console.WriteLine("Stopped");
-            //}
+   
 
-            Console.WriteLine("All services stopped.");
-            // Keep the console alive for a second to allow the user to see the message.
-            Thread.Sleep(1000);
+            Console.WriteLine("Press any Key To stop the services . . ");
+            Console.ReadKey();
+
+            MethodInfo onStopMethod = typeof(ServiceBase).GetMethod("OnStop", BindingFlags.Instance | BindingFlags.NonPublic);
+            foreach(ServiceBase service in servicesToRun)
+            {
+                Console.WriteLine("Stopping {0}...", service.ServiceName);
+                onStopMethod.Invoke(service, null);
+                Console.WriteLine("Stopped");
+            }
+      
         }
     }
 }

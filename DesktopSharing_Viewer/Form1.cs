@@ -20,7 +20,6 @@ namespace DesktopSharing
         Status Running = Status.Stopped;
         DateTime _Timer = DateTime.Now;
         int _Counter = 0;
-        UdpClient mytcpl;
         public Form1()
         {
             InitializeComponent();
@@ -36,7 +35,7 @@ namespace DesktopSharing
         {
             if(Running == Status.Stopped)
             {
-         
+
                 Running = Status.Starting;
                 _Thread = new System.Threading.Thread(new System.Threading.ThreadStart(StartCaptureing));
                 _Thread.Start();
@@ -48,44 +47,54 @@ namespace DesktopSharing
             Running = Status.Running;
             _Timer = DateTime.Now;
             _Counter = 0;
-            int port = 0;
-            IPEndPoint RemoteIpEndPoint = null;
-
-                port = Convert.ToInt32(textBox1.Text);
-                RemoteIpEndPoint = new IPEndPoint(IPAddress.Any, port);
-                mytcpl = new UdpClient(port);
-           
-            while(Running == Status.Running)
+            long bytecounter = 0;
+            try
             {
-                    if(mytcpl.Available > 0)
+         
+                using(var server = SecureTcp.Secure_Tcp_Client.Connect(Directory.GetCurrentDirectory() + "\\publickey.xml", "127.0.0.1", 6000))
+                {
+                    while(Running == Status.Running)
                     {
-                        using(var ms = new MemoryStream(mytcpl.Receive(ref RemoteIpEndPoint)))
+                        if(server.Client.Available > 0)
                         {
-                            if((DateTime.Now - _Timer).TotalMilliseconds > 1000)
+                            using(var ms = new MemoryStream(server.Read_And_Unencrypt()))
                             {
-                                Debug.WriteLine(_Counter + " FPS");
-                                _Counter = 0;
-                                _Timer = DateTime.Now;
-                            }
-
-                            _Counter += 1;
-                            pictureBox1.Invoke((MethodInvoker)delegate
-                            {
-                                try
+                                if((DateTime.Now - _Timer).TotalMilliseconds > 1000)
                                 {
-                                    if(pictureBox1.Image != null)
-                                        pictureBox1.Image.Dispose();
-                                    pictureBox1.Image = Image.FromStream(ms);
-                                    // pictureBox1.Image = ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
-                                } catch(Exception e)
-                                {
-                                    Debug.WriteLine(e.Message);
+                                    Debug.WriteLine(_Counter + " FPS Bytes received: " + bytecounter);
+                                    _Counter = 0;
+                                    _Timer = DateTime.Now;
+                                    bytecounter = 0;
                                 }
-                            });
+
+                                _Counter += 1;
+                                pictureBox1.Invoke((MethodInvoker)delegate
+                                {
+                                    try
+                                    {
+                                        if(pictureBox1.Image != null)
+                                            pictureBox1.Image.Dispose();
+                                        pictureBox1.Image = Image.FromStream(ms);
+                                        bytecounter += ms.Length;
+                                        Debug.WriteLine("Received image from server");
+                                        //pictureBox1.Image = ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
+                                    } catch(Exception e)
+                                    {
+                                        Debug.WriteLine(e.Message);
+                                    }
+                                });
+                            }
                         }
+
                     }
 
+                }
+
+            } catch(Exception e)
+            {
+                Debug.WriteLine(e.Message);
             }
+
             Running = Status.Stopped;
         }
 
@@ -94,18 +103,6 @@ namespace DesktopSharing
             Running = Status.ShuttingDown;
         }
 
-        private void button3_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                Pipes.Sender.SendMessage("hey there");
-                // Use this if using a specific name named pipe.
-                //  NamedPipe.Sender.SendMessage(messages, "Jabberwocky");
-            } catch(Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-
-        }
+ 
     }
 }

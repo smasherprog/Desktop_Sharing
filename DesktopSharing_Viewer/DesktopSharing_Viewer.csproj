@@ -79,10 +79,15 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Pipes\Pipes.csproj">
-      <Project>{982892a9-3967-44d3-8eed-88c30abe2ef1}</Project>
-      <Name>Pipes</Name>
+    <ProjectReference Include="..\SSLTcp\SecureTcp.csproj">
+      <Project>{a16d46d3-c103-4c9b-84da-17dcfd29f9e6}</Project>
+      <Name>SecureTcp</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="publickey.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

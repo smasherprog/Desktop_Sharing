@@ -7,10 +7,11 @@
     <ProjectGuid>{A16D46D3-C103-4C9B-84DA-17DCFD29F9E6}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SSLTcp</RootNamespace>
-    <AssemblyName>SSLTcp</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <RootNamespace>SecureTcp</RootNamespace>
+    <AssemblyName>SecureTcp</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -39,9 +40,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Secure_Stream.cs" />
     <Compile Include="Secure_Tcp_Listener.cs" />
+    <Compile Include="Secure_Tcp_Client.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Secure_Base_Tcp.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

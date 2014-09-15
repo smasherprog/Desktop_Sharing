@@ -5,75 +5,57 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace SSLTcp
+namespace SecureTcp
 {
-    public class Secure_Base_Tcp
+    public class Secure_Stream: IDisposable
     {
-        private string _Key;
+        public TcpClient Client;
         byte[] _MySessionKey;
-        private int _Buffer_Size = 1024 * 1024 * 8;
+        private int _Buffer_Size = 1024 * 1024 * 8;//dont want to reallocate large chunks of memory if I dont have to
         byte[] _Buffer;
-
-        public Secure_Base_Tcp(string key)
+        public Secure_Stream(TcpClient c, byte[] sessionkey)
         {
+            Client = c;
             _Buffer = new byte[_Buffer_Size];// 8 megabytes buffer
-            _Key = key;
-
+            _MySessionKey = sessionkey;
         }
-        protected bool ExchangeKeys(NetworkStream stream)
+        public void Dispose()
         {
-            try
-            {
-                using(ECDiffieHellmanCng alice = new ECDiffieHellmanCng())
-                {
-                    alice.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash;
-                    alice.HashAlgorithm = CngAlgorithm.Sha256;
-                    using(RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
-                    {
-                        rsa.FromXmlString(_Key);
-                        var data = rsa.Encrypt(alice.PublicKey.ToByteArray(), true);
 
-                        byte[] intBytes = BitConverter.GetBytes(data.Length);
-                        stream.Write(intBytes, 0, intBytes.Length);
-                        stream.Write(data, 0, data.Length);
-
-                        var b = new byte[4];
-                        stream.Read(b, 0, 4);
-                        var len = BitConverter.ToInt32(b, 0);
-                        stream.Read(data, 0, data.Length);
-                        var dec = rsa.Decrypt(data, true);
-                        _MySessionKey = alice.DeriveKeyMaterial(CngKey.Import(dec, CngKeyBlobFormat.EccPublicBlob));
-                        Debug.WriteLine("Key Exchange completed!");
-
-                    }
-                }
-            } catch(Exception e)
-            {
-                Debug.WriteLine(e.Message);
-                return false;
-            }
-            return true;
+            if(Client != null)
+                Client.Close();
+            Client = null;
         }
+        public void Encrypt_And_Send(byte[] data)
+        {
+            Write(data, Client.GetStream());
+        }
+        public byte[] Read_And_Unencrypt()
+        {
+            return Read(Client.GetStream());
+        }
+
         protected void Write(byte[] data, NetworkStream stream)
         {
             try
             {
                 using(AesCryptoServiceProvider aes = new AesCryptoServiceProvider())
                 {
-                    aes.KeySize = _MySessionKey.Length;
+                    aes.KeySize = _MySessionKey.Length * 8;
                     aes.Key = _MySessionKey;
                     aes.GenerateIV();
                     aes.Mode = CipherMode.CBC;
                     aes.Padding = PaddingMode.PKCS7;
 
-                    var iv = new byte[16];
-                    stream.Write(iv, 0, 16);
+                    var iv = aes.IV;
+                    stream.Write(iv, 0, iv.Length);
                     using(ICryptoTransform encrypt = aes.CreateEncryptor())
                     {
                         var encryptedbytes = encrypt.TransformFinalBlock(data, 0, data.Length);
-                        stream.Write(BitConverter.GetBytes(encryptedbytes.Length), 0, 4);
+                        var len = BitConverter.GetBytes(encryptedbytes.Length);
+               
+                        stream.Write(len, 0, len.Length);
                         stream.Write(encryptedbytes, 0, encryptedbytes.Length);
                     }
                 }
@@ -91,20 +73,25 @@ namespace SSLTcp
                     var iv = new byte[16];
                     stream.Read(iv, 0, 16);
 
-                    var b = new byte[4];
-                    stream.Read(b, 0, 4);
+                    var b = BitConverter.GetBytes(0);
+                    stream.Read(b, 0, b.Length);
                     var len = BitConverter.ToInt32(b, 0);
-
                     using(AesCryptoServiceProvider aes = new AesCryptoServiceProvider())
                     {
-                        aes.KeySize = _MySessionKey.Length;
+                        aes.KeySize = _MySessionKey.Length * 8;
                         aes.Key = _MySessionKey;
                         aes.IV = iv;
                         aes.Mode = CipherMode.CBC;
                         aes.Padding = PaddingMode.PKCS7;
-
+                        
+                        int readbytes = 0;
+                        while(readbytes < len)
+                        {
+                            readbytes += stream.Read(_Buffer, readbytes, len);
+                        }
                         using(ICryptoTransform decrypt = aes.CreateDecryptor())
                         {
+                
                             return decrypt.TransformFinalBlock(_Buffer, 0, len);
                         }
                     }

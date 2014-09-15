@@ -8,49 +8,79 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace SSLTcp
+namespace SecureTcp
 {
-    public class Secure_Tcp_Listener : Secure_Base_Tcp, IDisposable
+    public class Secure_Tcp_Listener: IDisposable
     {
-        private TcpListener sslServer;
-        private TcpClient Client;
-
-        public Secure_Tcp_Listener(string key, int port):base(key)
+        private TcpListener SecureServer;
+        private string _KeyLocation;
+        public Secure_Tcp_Listener(string key, int port)
+           
         {
-            Client = null;
-            sslServer = new TcpListener(System.Net.IPAddress.Any, port);
-            sslServer.Start();
+            _KeyLocation = key;
+            SecureServer = new TcpListener(System.Net.IPAddress.Any, port);
+            SecureServer.Start();
         }
         public void Dispose()
         {
-            if(Client != null)
-                Client.Close();
-            if(sslServer != null)
-                sslServer.Stop();
-            sslServer = null;
-            Client = null;
+          
+            if(SecureServer != null)
+                SecureServer.Stop();
+            SecureServer = null;
         }
 
-        public TcpClient AcceptTcpClient()
+        public Secure_Stream AcceptTcpClient()
         {
-            Client = sslServer.AcceptTcpClient();
+            var Client = SecureServer.AcceptTcpClient();
             Client.ReceiveTimeout = 5000;
-            if(!ExchangeKeys(Client.GetStream()))
+            var sessionkey = ExchangeKeys(_KeyLocation, Client.GetStream());
+            if(sessionkey == null)
             {
                 Client.Close();
                 Client = null;
+                throw new ArgumentException("Key Exchange Failed");
             }
-            return Client;
+            return new Secure_Stream(Client, sessionkey);
         }
-        public void Write(byte[] data)
+
+        public byte[] ExchangeKeys(string key_location, NetworkStream stream)
         {
-            Write(data, Client.GetStream());
-        }
-        public byte[] Read()
-        {
-            return Read(Client.GetStream());
+            try
+            {
+               
+                
+                using(RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+                {
+                    var keyfile = File.ReadAllText(key_location);
+                    rsa.FromXmlString(keyfile);
+
+                    var b = BitConverter.GetBytes(0);
+                    stream.Read(b, 0, b.Length);
+                    var len = BitConverter.ToInt32(b, 0);
+                    if(len > 4000)
+                        throw new ArgumentException("Buffer Overlflow in Encryption key exchange!");
+                    byte[] sessionkey =  new byte[len];
+                    stream.Read(sessionkey, 0, len);
+
+                    sessionkey = rsa.Decrypt(sessionkey, true);//decrypt the session key
+                    //hash the key and send it back to prove that I received it correctly
+                    byte[] sessionkeyhash = SHA256.Create().ComputeHash(sessionkey);
+                    //send it back to the client
+                    byte[] intBytes = BitConverter.GetBytes(sessionkeyhash.Length);
+                    stream.Write(intBytes, 0, intBytes.Length);
+                    stream.Write(sessionkeyhash, 0, sessionkeyhash.Length);
+
+                    Debug.WriteLine("Key Exchange completed!");
+                    return sessionkey;
+
+                }
+            } catch(Exception e)
+            {
+                Debug.WriteLine(e.Message);
+                return null;
+            }
+
         }
     }
 }
