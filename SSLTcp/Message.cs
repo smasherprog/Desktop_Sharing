@@ -17,6 +17,25 @@ namespace SecureTcp
         {
             Blocks.Add(b);
         }
+
+        public void Add_Blocks(params byte[][] list )
+        {
+            foreach(var item in list)
+            {
+                Add_Block(item);
+            }
+            
+        }
+        public long length
+        {
+            get
+            {
+                var t= 4 + (Blocks.Count * 4);
+                foreach(var item in Blocks)
+                    t += item.Length;
+                return t;
+            }
+        }
         public static Tcp_Message FromBuffer(byte[] b)
         {
             var m = new Tcp_Message(1);

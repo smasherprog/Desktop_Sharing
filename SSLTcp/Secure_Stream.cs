@@ -15,28 +15,56 @@ namespace SecureTcp
         byte[] _MySessionKey;
         private int _Buffer_Size = 1024 * 1024 * 8;//dont want to reallocate large chunks of memory if I dont have to
         byte[] _Buffer;
+        public long Received_Total;
+        public long Sent_Total;
+        private long _Last_Received_BPS;
+        public long Received_BPS;
+        private long _Last_Sent_BPS;
+        public long Sent_BPS;
+
+        private DateTime _SecondCounter = DateTime.Now;
+
         public Secure_Stream(TcpClient c, byte[] sessionkey)
         {
             Client = c;
             _Buffer = new byte[_Buffer_Size];// 8 megabytes buffer
             _MySessionKey = sessionkey;
+            Sent_BPS = Received_BPS=Sent_Total = Received_Total = 0;
         }
         public void Dispose()
         {
-
             if(Client != null)
                 Client.Close();
             Client = null;
         }
         public void Encrypt_And_Send(Tcp_Message m)
         {
-            Write(m, Client.GetStream());
+
+            Write(m, Client.GetStream()); 
+            var l = m.length;
+            _Last_Sent_BPS += l;
+            Sent_Total += l;
+            UpdateCounters();
         }
         public Tcp_Message Read_And_Unencrypt()
         {
-            return Read(Client.GetStream());
+            var r= Read(Client.GetStream());
+            var l = r.length;
+            Received_Total += l;
+            _Last_Received_BPS += l;
+            UpdateCounters();
+            return r;
         }
-
+        private void UpdateCounters()
+        {
+            if((DateTime.Now - _SecondCounter).TotalMilliseconds > 1000)
+            {
+                Sent_BPS= _Last_Sent_BPS;
+                Received_BPS = _Last_Received_BPS;
+                _Last_Received_BPS = _Last_Sent_BPS = 0;
+                _SecondCounter = DateTime.Now;
+            }
+        }
         protected void Write(Tcp_Message m, NetworkStream stream)
         {
             try

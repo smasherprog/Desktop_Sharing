@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DesktopSharing_Viewer.Code;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -15,118 +16,71 @@ namespace DesktopSharing
 {
     public partial class Form1 : Form
     {
-        enum Status { Starting, Running, Stopped, ShuttingDown }
-        System.Threading.Thread _Thread;
-        Status Running = Status.Stopped;
-        DateTime _Timer = DateTime.Now;
-        int _Counter = 0;
+        DesktopSharing_Viewer.Code.Viewer_Loop _Viewer_Loop;
+
         public Form1()
         {
             InitializeComponent();
             FormClosing += Form1_FormClosing;
+            _Viewer_Loop = new DesktopSharing_Viewer.Code.Viewer_Loop();
+            _Viewer_Loop.Update_Image = Update_Image;
+            _Viewer_Loop.New_Image = New_Image;
+            Application.AddMessageFilter(new InputListener(pictureBox1.Handle));
+
         }
 
         void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            Running = Status.ShuttingDown;
-        }
+            _Viewer_Loop.Stop();
 
+        }
+        private void Update_Image(Point p, byte[] m)
+        {
+            pictureBox1.Invoke((MethodInvoker)delegate
+            {
+                try
+                {
+                    using(var memo = new MemoryStream(m))
+                    using(var imgregion = Bitmap.FromStream(memo))
+                    using(var g = Graphics.FromImage(pictureBox1.Image))
+                    {
+                        g.DrawImage(imgregion, p);
+                        g.Flush();
+                    }
+                    pictureBox1.Invalidate();
+                } catch(Exception e)
+                {
+                    Debug.WriteLine(e.Message);
+                }
+            });
+        }
+        private void New_Image(byte[] m)
+        {
+            pictureBox1.Invoke((MethodInvoker)delegate
+            {
+                try
+                {
+                    if(pictureBox1.Image != null)
+                        pictureBox1.Image.Dispose();
+                    using(var memo = new MemoryStream(m))
+                    {
+                        pictureBox1.Image = Bitmap.FromStream(memo);
+                    }
+                } catch(Exception e)
+                {
+                    Debug.WriteLine(e.Message);
+                }
+            });
+        }
         private void button1_Click(object sender, EventArgs e)
         {
-            if(Running == Status.Stopped)
-            {
+            _Viewer_Loop.Start();
 
-                Running = Status.Starting;
-                _Thread = new System.Threading.Thread(new System.Threading.ThreadStart(StartCaptureing));
-                _Thread.Start();
-            }
 
         }
-        private void StartCaptureing()
-        {
-            Running = Status.Running;
-            _Timer = DateTime.Now;
-            _Counter = 0;
-            long bytecounter = 0;
-            try
-            {
-
-                using(var server = SecureTcp.Secure_Tcp_Client.Connect(Directory.GetCurrentDirectory() + "\\publickey.xml", "127.0.0.1", 6000))
-                {
-                    while(Running == Status.Running)
-                    {
-                        if(server.Client.Available > 0)
-                        {
-                            var ms = server.Read_And_Unencrypt();
-
-                            if((DateTime.Now - _Timer).TotalMilliseconds > 1000)
-                            {
-                                Debug.WriteLine(_Counter + " FPS Bytes received: " + bytecounter);
-                                _Counter = 0;
-                                _Timer = DateTime.Now;
-                                bytecounter = 0;
-                            }
-                            _Counter += 1;
-
-                            Debug.WriteLine("Received " + ms.Type.ToString());
-                            if(ms.Type == (int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION)
-                            {
-                                var top = BitConverter.ToInt32(ms.Blocks[1], 0);
-                                var left = BitConverter.ToInt32(ms.Blocks[2], 0);
-                                Debug.WriteLine("got here");
-                                pictureBox1.Invoke((MethodInvoker)delegate
-                                {
-                                    try
-                                    {
-                                        using(var memo = new MemoryStream(ms.Blocks[3]))
-                                        using(var imgregion = Bitmap.FromStream(memo))
-                                        using(var g = Graphics.FromImage(pictureBox1.Image))
-                                        {
-                                            g.DrawImage(imgregion, new Point(left, top));
-                                            g.Flush();
-                                        }
-                                        pictureBox1.Invalidate();
-                                        Debug.WriteLine("Received update from server");
-
-                                    } catch(Exception e)
-                                    {
-                                        Debug.WriteLine(e.Message);
-                                    }
-                                });
-                            } else if(ms.Type == (int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE)
-                            {
-                                pictureBox1.Invoke((MethodInvoker)delegate
-                                {
-                                    try
-                                    {
-                                        if(pictureBox1.Image != null)
-                                            pictureBox1.Image.Dispose();
-                                        using(var memo = new MemoryStream(ms.Blocks[1]))
-                                        {
-                                            pictureBox1.Image = Bitmap.FromStream(memo);
-                                        }
-                                        Debug.WriteLine("Received image from server");
-
-                                    } catch(Exception e)
-                                    {
-                                        Debug.WriteLine(e.Message);
-                                    }
-                                });
-                            }
-                        }
-                    }
-
-                }
-            } catch(Exception e)
-            {
-                Debug.WriteLine(e.Message);
-            }
-            Running = Status.Stopped;
-        }
-
         private void button2_Click(object sender, EventArgs e)
         {
-            Running = Status.ShuttingDown;
+            _Viewer_Loop.Stop();
         }
 
 

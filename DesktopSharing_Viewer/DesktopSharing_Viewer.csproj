@@ -44,6 +44,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Code\InputListener.cs" />
+    <Compile Include="Code\Viewer_Loop.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>

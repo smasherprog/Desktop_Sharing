@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bitmap_Helper.cs" />
+    <Compile Include="Input\PInvoke.cs" />
     <Compile Include="Message_Types.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScreenCapture.cs" />
