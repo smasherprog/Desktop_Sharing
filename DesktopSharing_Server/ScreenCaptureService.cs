@@ -26,7 +26,8 @@ namespace DesktopSharing_Server
         ImageCodecInfo jgpEncoder;
         EncoderParameters myEncoderParameters;
 
-        public event Desktop_Sharing_Shared.Input.Constants.MouseEventHandler InputMouseEvent;
+        public event Desktop_Sharing_Shared.Input.PInvoke.MouseEventHandler InputMouseEvent;
+        public event Desktop_Sharing_Shared.Input.PInvoke.KeyEventHandler InputKeyEvent;
 
         public ScreenCaptureService()
         {
@@ -37,13 +38,14 @@ namespace DesktopSharing_Server
             myEncoderParameters = new EncoderParameters(1);
             myEncoderParameters.Param[0] = myEncoderParameter;
             InputMouseEvent += Desktop_Sharing_Shared.Input.PInvoke.SendMouseEvent;
+            InputKeyEvent += Desktop_Sharing_Shared.Input.PInvoke.KeyEvent;
             //pipe.Data += new DesktopService_API.DataIsReady(DataBeingRecieved);
             //if(pipe.ServiceOn() == false)
             //    MessageBox.Show(pipe.error.Message);
 
         }
 
- 
+
 
         string DataBeingRecieved(string data)
         {
@@ -82,7 +84,7 @@ namespace DesktopSharing_Server
         {
             Debug.WriteLine("Starting Network Thread");
             Running = Status.Running;
-     
+
             try
             {
                 using(var _Secure_Listener = new Secure_Tcp_Listener(Directory.GetCurrentDirectory() + "\\privatekey.xml", 6000))
@@ -116,8 +118,8 @@ namespace DesktopSharing_Server
                         if(client == null)
                             continue;
                         SendPass(client);
-                        ReadPass(client);
-  
+                        ReceivePass(client);
+
                     }
                 }
 
@@ -128,7 +130,7 @@ namespace DesktopSharing_Server
             Running = Status.Stopped;
             Debug.WriteLine("Finished Network Thread");
         }
-        private void ReadPass(Secure_Stream client)
+        private void ReceivePass(Secure_Stream client)
         {
             try
             {
@@ -141,7 +143,22 @@ namespace DesktopSharing_Server
                         {
                             if(InputMouseEvent != null)
                             {
-                                InputMouseEvent(BitConverter.ToInt32(ms.Blocks[1], 0), BitConverter.ToInt32(ms.Blocks[2], 0), BitConverter.ToInt32(ms.Blocks[3], 0), BitConverter.ToInt32(ms.Blocks[4], 0));
+
+                                int width = Screen.AllScreens.Sum(a => a.Bounds.Width);
+                                int height = Screen.AllScreens.Max(a => a.Bounds.Height);
+
+                                InputMouseEvent((Desktop_Sharing_Shared.Input.PInvoke.WinFormMouseEventFlags)BitConverter.ToInt32(ms.Blocks[1], 0),
+                                    (int)((double)BitConverter.ToInt32(ms.Blocks[2], 0) / (double)width * (double)65535),
+                                    (int)((double)BitConverter.ToInt32(ms.Blocks[3], 0) / (double)height * (double)65535),
+                                    BitConverter.ToInt32(ms.Blocks[4], 0));
+                            }
+                            break;
+                        }
+                    case ((int)Desktop_Sharing_Shared.Message_Types.KEY_EVENT):
+                        {
+                            if(InputKeyEvent != null)
+                            {
+                                InputKeyEvent(BitConverter.ToInt32(ms.Blocks[1], 0), (Desktop_Sharing_Shared.Input.PInvoke.PInvoke_KeyState)BitConverter.ToInt32(ms.Blocks[2], 0));
                             }
                             break;
                         }
@@ -162,26 +179,26 @@ namespace DesktopSharing_Server
                 var img = Desktop_Sharing_Shared.ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
                 if(_LastImage == null)
                 {
-                    Debug.WriteLine("Sending " + (int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE);
+
                     var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE);
                     using(var memorys = new MemoryStream())
                     {
                         img.Save(memorys, jgpEncoder, myEncoderParameters);
                         ms.Add_Block(memorys.ToArray());
                     }
-                    Debug.WriteLine("Sending image to client");
+                    Debug.WriteLine("Sending RESOLUTION_CHANGE image to client");
                     client.Encrypt_And_Send(ms);
                 } else
                 {
-                    Debug.WriteLine("Sending " + (int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION);
-                    var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION);
 
+                    var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION);
                     var rect = Desktop_Sharing_Shared.Bitmap_Helper.Get_Diff(_LastImage, img);
                     if(rect.Width > 0 && rect.Height > 0)
                     {
 
                         using(var updateregion = img.Clone(rect, img.PixelFormat))
                         {
+
                             ms.Add_Block(BitConverter.GetBytes(rect.Top));
                             ms.Add_Block(BitConverter.GetBytes(rect.Left));
                             using(var memorys = new MemoryStream())
@@ -189,7 +206,7 @@ namespace DesktopSharing_Server
                                 updateregion.Save(memorys, jgpEncoder, myEncoderParameters);
                                 ms.Add_Block(memorys.ToArray());
                             }
-                            Debug.WriteLine("Sending image to client");
+                            Debug.WriteLine("Sending UPDATE_REGION image to client " + rect.Top + " " + rect.Left);
                             client.Encrypt_And_Send(ms);
                         }
                     }

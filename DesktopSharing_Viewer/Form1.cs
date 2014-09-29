@@ -25,7 +25,10 @@ namespace DesktopSharing
             _Viewer_Loop = new DesktopSharing_Viewer.Code.Viewer_Loop();
             _Viewer_Loop.Update_Image = Update_Image;
             _Viewer_Loop.New_Image = New_Image;
-            Application.AddMessageFilter(new InputListener(pictureBox1.Handle));
+            var t = new InputListener(pictureBox1.Handle);
+            t.InputMouseEvent += _Viewer_Loop.OnMouseEvent;
+            t.InputKeyEvent += _Viewer_Loop.OnKeyEvent;
+            Application.AddMessageFilter(t);
 
         }
 

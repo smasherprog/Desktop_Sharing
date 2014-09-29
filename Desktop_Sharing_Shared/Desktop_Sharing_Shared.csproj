@@ -46,6 +46,7 @@
     <Compile Include="Message_Types.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScreenCapture.cs" />
+    <Compile Include="Utilities\Format_Bytes.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

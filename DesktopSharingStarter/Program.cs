@@ -44,8 +44,6 @@ namespace DesktopSharingStarter
             {
 
                 ServiceBase.Run(ServicesToRun.ToArray());
-
-
             }
         }
     }

@@ -9,7 +9,9 @@ namespace Desktop_Sharing_Shared
     {
         RESOLUTION_CHANGE,
         UPDATE_REGION,
-        MOUSE_EVENT
-
+        MOUSE_EVENT,
+        PING,
+        PING_ACK,
+        KEY_EVENT,
     }
 }

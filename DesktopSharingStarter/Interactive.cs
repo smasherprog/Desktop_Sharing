@@ -24,8 +24,6 @@ namespace WindowsService
                 Console.WriteLine("Started");
             }
 
-   
-
             Console.WriteLine("Press any Key To stop the services . . ");
             Console.ReadKey();
 

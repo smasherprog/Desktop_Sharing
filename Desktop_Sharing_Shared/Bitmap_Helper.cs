@@ -66,7 +66,24 @@ namespace Desktop_Sharing_Shared
             }
             first.UnlockBits(bmpDataA);
             second.UnlockBits(bmpDataB);
-
+            if((right - left <= 0) || (bottom - top <= 0))
+                return new Rectangle(0, 0, 0, 0);
+            if(left > 0)
+                left -= 1;
+            if(top > 0)
+                top -= 1;
+            if(top > 0)
+                top -= 1;
+            if(top > 0)
+                top -= 1;
+            if(right < second.Width - 1)
+                right += 1;
+            if(right < second.Width - 1)
+                right += 1;
+            if(right < second.Width - 1)
+                right += 1;
+            if(bottom < second.Height - 1)
+                bottom += 1;
             return new Rectangle(left, top, right - left, bottom - top);
         }
         private static int GetStride(PixelFormat p)

@@ -32,6 +32,7 @@ namespace SecureTcp
 
         public Secure_Stream AcceptTcpClient()
         {
+          
             var Client = SecureServer.AcceptTcpClient();
             Client.ReceiveTimeout = 5000;
             var sessionkey = ExchangeKeys(_KeyLocation, Client.GetStream());
