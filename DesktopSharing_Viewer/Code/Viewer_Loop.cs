@@ -19,10 +19,13 @@ namespace DesktopSharing_Viewer.Code
         private object _OutGoingMessagesLock = new object();
 
         private DateTime Secondcounter = DateTime.Now;
+        public string IPtoConnect;
+
         public Viewer_Loop()
         {
             Running = Status.Stopped;
             _OutGoingMessages = new List<SecureTcp.Tcp_Message>();
+            IPtoConnect = "127.0.0.1";
         }
         public void Start()
         {
@@ -61,7 +64,7 @@ namespace DesktopSharing_Viewer.Code
 
             try
             {
-                using(var server = SecureTcp.Secure_Tcp_Client.Connect(Directory.GetCurrentDirectory() + "\\publickey.xml", "192.168.207.130", 6000))
+                using(var server = SecureTcp.Secure_Tcp_Client.Connect(Directory.GetCurrentDirectory() + "\\publickey.xml", IPtoConnect, 6000))
                 {
                     while(Running == Status.Running)
                     {

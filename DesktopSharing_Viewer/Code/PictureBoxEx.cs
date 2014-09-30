@@ -11,6 +11,7 @@ namespace DesktopSharing_Viewer.Code
         public PictureBoxEx()
         {
             this.SetStyle(ControlStyles.Selectable, true);
+          
         }
 
         protected override void OnClick(EventArgs e)

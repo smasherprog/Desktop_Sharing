@@ -39,9 +39,11 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bitmap_Helper.cs" />
+    <Compile Include="Compression\Zip.cs" />
     <Compile Include="Input\PInvoke.cs" />
     <Compile Include="Message_Types.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

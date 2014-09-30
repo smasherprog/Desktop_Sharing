@@ -96,14 +96,14 @@ namespace Desktop_Sharing_Shared.Input
         public enum PInvoke_KeyState : int
         {
             UP = 0x0002,
-            DOWN =1
+            DOWN =0
         }
 
         public delegate void KeyEventHandler(int bVk, PInvoke_KeyState s);
         public static void KeyEvent(int bVk, PInvoke_KeyState s)
         {
             var scan = MapVirtualKey(bVk, 0);
-           // Console.WriteLine("Received " + bVk + " in state " + s +  "  scan code is " + scan);
+            Console.WriteLine("Received " + bVk + " in state " + s +  "  scan code is " + scan);
             keybd_event((byte)bVk, (byte)scan, (int)s, 0);
         }
     }

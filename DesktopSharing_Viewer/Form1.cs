@@ -29,9 +29,21 @@ namespace DesktopSharing
             t.InputMouseEvent += _Viewer_Loop.OnMouseEvent;
             t.InputKeyEvent += _Viewer_Loop.OnKeyEvent;
             Application.AddMessageFilter(t);
-
+            //this.DragDrop += new DragEventHandler(this.Form1_DragDrop);
+            this.DragEnter += new DragEventHandler(this.Form1_DragEnter);
         }
-
+        private void Form1_DragEnter(object sender, DragEventArgs e)
+        {
+            // If the data is a file or a bitmap, display the copy cursor. 
+            if(e.Data.GetDataPresent(DataFormats.Bitmap) ||
+               e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effect = DragDropEffects.Copy;
+            } else
+            {
+                e.Effect = DragDropEffects.None;
+            }
+        }
         void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             _Viewer_Loop.Stop();
@@ -77,9 +89,8 @@ namespace DesktopSharing
         }
         private void button1_Click(object sender, EventArgs e)
         {
+            _Viewer_Loop.IPtoConnect = textBox1.Text;
             _Viewer_Loop.Start();
-
-
         }
         private void button2_Click(object sender, EventArgs e)
         {

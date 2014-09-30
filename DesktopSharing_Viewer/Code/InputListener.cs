@@ -11,41 +11,62 @@ namespace DesktopSharing_Viewer.Code
     {
         public event Desktop_Sharing_Shared.Input.PInvoke.MouseEventHandler InputMouseEvent;
         public event Desktop_Sharing_Shared.Input.PInvoke.KeyEventHandler InputKeyEvent;
-        private DateTime SecondCounter = DateTime.Now;
+        private DateTime KeyboardSecondCounter = DateTime.Now;
+        private DateTime MouseSecondCounter = DateTime.Now;
 
         private const int InputPerSec = 30;
+        private List<int> Keys_Down;
+
 
         private IntPtr Handle;
         public InputListener(IntPtr handle)
         {
             Handle = handle;
+            Keys_Down = new List<int>();
         }
 
         public bool PreFilterMessage(ref System.Windows.Forms.Message m)
         {
-
             if(Handle == m.HWnd)
             {
                 if(m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_KEYDOWN || m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_KEYUP)
                 {
                     if(InputKeyEvent != null)
                     {
-                        if((DateTime.Now - SecondCounter).TotalMilliseconds < InputPerSec)
-                            return false;
-                        else
-                            SecondCounter = DateTime.Now;
-                        InputKeyEvent(unchecked(IntPtr.Size == 8 ? (int)m.WParam.ToInt64() : (int)m.WParam.ToInt32()), m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_KEYDOWN ? Desktop_Sharing_Shared.Input.PInvoke.PInvoke_KeyState.DOWN : Desktop_Sharing_Shared.Input.PInvoke.PInvoke_KeyState.UP);
-                        return false;
+
+                        var temp = unchecked(IntPtr.Size == 8 ? (int)m.WParam.ToInt64() : (int)m.WParam.ToInt32());
+
+                        if(m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_KEYDOWN)
+                        {
+                            //Debug.WriteLine("KeyDown");
+                            if(Keys_Down.Contains(temp))
+                            {
+                                if((DateTime.Now - KeyboardSecondCounter).TotalMilliseconds < InputPerSec)
+                                    return false;
+                                else
+                                    KeyboardSecondCounter = DateTime.Now;
+                            } else
+                            {
+                                Keys_Down.Add(temp);
+                            }
+                        } else
+                        {
+                            //Debug.WriteLine("KeyUP");
+                            Keys_Down.Remove(temp);//else its an up, so remove it
+                        }
+                        InputKeyEvent(temp, m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_KEYDOWN ? Desktop_Sharing_Shared.Input.PInvoke.PInvoke_KeyState.DOWN : Desktop_Sharing_Shared.Input.PInvoke.PInvoke_KeyState.UP);
+                        return true;
                     }
+
                 }
                 if(InputMouseEvent != null && ((int[])Enum.GetValues(typeof(Desktop_Sharing_Shared.Input.PInvoke.WinFormMouseEventFlags))).Contains(m.Msg))
                 {
                     if(m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_MOUSEMOVE)
                     {
-                        if((DateTime.Now - SecondCounter).TotalMilliseconds < InputPerSec)
+                        if((DateTime.Now - MouseSecondCounter).TotalMilliseconds < InputPerSec)
                             return false;
                         else
-                            SecondCounter = DateTime.Now;
+                            MouseSecondCounter = DateTime.Now;
                     }
                     var p = GetPoint(m.LParam);
                     var wheel = 0;
