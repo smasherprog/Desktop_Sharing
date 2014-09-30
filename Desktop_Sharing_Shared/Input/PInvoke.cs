@@ -103,7 +103,7 @@ namespace Desktop_Sharing_Shared.Input
         public static void KeyEvent(int bVk, PInvoke_KeyState s)
         {
             var scan = MapVirtualKey(bVk, 0);
-            Console.WriteLine("Received " + bVk + " in state " + s +  "  scan code is " + scan);
+            //Console.WriteLine("Received " + bVk + " in state " + s +  "  scan code is " + scan);
             keybd_event((byte)bVk, (byte)scan, (int)s, 0);
         }
     }
