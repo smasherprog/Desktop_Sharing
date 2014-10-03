@@ -13,5 +13,7 @@ namespace Desktop_Sharing_Shared
         PING,
         PING_ACK,
         KEY_EVENT,
+        FOLDER,
+        FILE
     }
 }

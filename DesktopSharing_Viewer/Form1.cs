@@ -18,7 +18,7 @@ namespace DesktopSharing
     {
         DesktopSharing_Viewer.Code.Viewer_Loop _Viewer_Loop;
 
-        public Form1()
+        public Form1(string ipaddress)
         {
             InitializeComponent();
             FormClosing += Form1_FormClosing;
@@ -29,8 +29,10 @@ namespace DesktopSharing
             t.InputMouseEvent += _Viewer_Loop.OnMouseEvent;
             t.InputKeyEvent += _Viewer_Loop.OnKeyEvent;
             Application.AddMessageFilter(t);
-            //this.DragDrop += new DragEventHandler(this.Form1_DragDrop);
+            this.DragDrop += new DragEventHandler(this.Form1_DragDrop);
             this.DragEnter += new DragEventHandler(this.Form1_DragEnter);
+            _Viewer_Loop.IPtoConnect = ipaddress;
+            _Viewer_Loop.Start();
         }
         private void Form1_DragEnter(object sender, DragEventArgs e)
         {
@@ -44,10 +46,15 @@ namespace DesktopSharing
                 e.Effect = DragDropEffects.None;
             }
         }
+
+        void Form1_DragDrop(object sender, DragEventArgs e)
+        {
+            _Viewer_Loop.SendFiles((string[])e.Data.GetData(DataFormats.FileDrop));
+        }
         void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             _Viewer_Loop.Stop();
-
+            Application.Exit();
         }
         private void Update_Image(Point p, byte[] m)
         {
@@ -87,16 +94,6 @@ namespace DesktopSharing
                 }
             });
         }
-        private void button1_Click(object sender, EventArgs e)
-        {
-            _Viewer_Loop.IPtoConnect = textBox1.Text;
-            _Viewer_Loop.Start();
-        }
-        private void button2_Click(object sender, EventArgs e)
-        {
-            _Viewer_Loop.Stop();
-        }
-
 
     }
 }

@@ -18,6 +18,9 @@ namespace DesktopSharing_Viewer.Code
         private List<SecureTcp.Tcp_Message> _OutGoingMessages;
         private object _OutGoingMessagesLock = new object();
 
+        private List<string> _OutGoingFiles;
+        private object _OutGoingFilesLock = new object();
+
         private DateTime Secondcounter = DateTime.Now;
         public string IPtoConnect;
 
@@ -25,6 +28,7 @@ namespace DesktopSharing_Viewer.Code
         {
             Running = Status.Stopped;
             _OutGoingMessages = new List<SecureTcp.Tcp_Message>();
+            _OutGoingFiles = new List<string>();
             IPtoConnect = "127.0.0.1";
         }
         public void Start()
@@ -34,6 +38,13 @@ namespace DesktopSharing_Viewer.Code
             Secondcounter = DateTime.Now;
             _Thread = new System.Threading.Thread(new System.Threading.ThreadStart(Run));
             _Thread.Start();
+        }
+        public void SendFiles(string[] files)
+        {
+            lock(_OutGoingFilesLock)
+            {
+                _OutGoingFiles.AddRange(files);
+            }
         }
         public void OnMouseEvent(Desktop_Sharing_Shared.Input.PInvoke.WinFormMouseEventFlags msg, int x, int y, int wheel_delta)
         {
@@ -110,6 +121,55 @@ namespace DesktopSharing_Viewer.Code
                     client.Encrypt_And_Send(item);
                 }
                 _OutGoingMessages.Clear();
+            }
+            lock(_OutGoingFilesLock)
+            {
+
+                foreach(var item in _OutGoingFiles)
+                {
+                    AddFileOrDirectory("", item);
+                }
+            }
+        }
+        private void AddFileOrDirectory(string root1, string fullpath)
+        {
+            Debug.WriteLine("AddFileOrDirectory " + root1 + "       " + fullpath);
+            if(Directory.Exists(fullpath))
+            {
+                try
+                {
+                    //var di = new DirectoryInfo(fullpath);
+                    //var t = new SecureTcp.Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.FOLDER);
+                    //var foldername = root1 +di.Name;
+                    //t.Add_Block(Desktop_Sharing_Shared.Utilities.Format.GetBytes(foldername));
+                    //_OutGoingMessages.Add(t);
+                    //foreach(var item in di.GetDirectories())
+                    //{
+                    //    AddFileOrDirectory(foldername + "\\", item.FullName);
+                    //}
+                    //foreach(var item in di.GetFiles())
+                    //{
+                    //    AddFileOrDirectory(foldername + "\\", item.FullName);
+                    //}
+                    Debug.WriteLine("Not Implemented fully just yet.");
+                } catch(Exception e)
+                {
+                    Debug.WriteLine(e.Message);
+                }
+            } else
+            {
+                try
+                {
+                    var fi = File.ReadAllBytes(fullpath);
+                    var t = new SecureTcp.Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.FILE);
+                    t.Add_Block(Desktop_Sharing_Shared.Utilities.Format.GetBytes(root1 + Path.GetFileName(fullpath)));
+                    t.Add_Block(fi);
+                    _OutGoingMessages.Add(t);
+
+                } catch(Exception e)
+                {
+                    Debug.WriteLine(e.Message);
+                }
             }
         }
         public void Stop()

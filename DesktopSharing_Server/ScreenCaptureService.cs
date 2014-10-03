@@ -28,6 +28,8 @@ namespace DesktopSharing_Server
 
         public event Desktop_Sharing_Shared.Input.PInvoke.MouseEventHandler InputMouseEvent;
         public event Desktop_Sharing_Shared.Input.PInvoke.KeyEventHandler InputKeyEvent;
+        public event Desktop_Sharing_Shared.Input.PInvoke.FileReceivedHandler FileReceivedEvent;
+        public event Desktop_Sharing_Shared.Input.PInvoke.FolderReceivedHandler FolderReceivedEvent;
 
         public ScreenCaptureService()
         {
@@ -39,14 +41,13 @@ namespace DesktopSharing_Server
             myEncoderParameters.Param[0] = myEncoderParameter;
             InputMouseEvent += Desktop_Sharing_Shared.Input.PInvoke.SendMouseEvent;
             InputKeyEvent += Desktop_Sharing_Shared.Input.PInvoke.KeyEvent;
+            FileReceivedEvent += Desktop_Sharing_Shared.Input.PInvoke.FileEvent;
+            FolderReceivedEvent += Desktop_Sharing_Shared.Input.PInvoke.FolderEvent;
             //pipe.Data += new DesktopService_API.DataIsReady(DataBeingRecieved);
             //if(pipe.ServiceOn() == false)
             //    MessageBox.Show(pipe.error.Message);
 
         }
-
-
-
         string DataBeingRecieved(string data)
         {
             Debug.WriteLine(data);
@@ -64,6 +65,9 @@ namespace DesktopSharing_Server
         {
             Running = Status.ShuttingDown;
             Stop(_Network_Thread);
+            if(_LastImage != null)
+                _LastImage.Dispose();
+            _LastImage = null;
         }
 
         private void Stop(Thread t)
@@ -92,10 +96,14 @@ namespace DesktopSharing_Server
                     Secure_Stream client = null;
                     while(Running == Status.Running)
                     {
+                        bool newclient = false;
                         try
                         {
                             if(client == null)
+                            {
                                 client = _Secure_Listener.AcceptTcpClient();
+                                newclient = true;
+                            }
                         } catch(Exception e)
                         {
                             Debug.WriteLine(e.Message);
@@ -117,7 +125,7 @@ namespace DesktopSharing_Server
                         }
                         if(client == null)
                             continue;
-                        SendPass(client);
+                        SendPass(client, newclient);
                         ReceivePass(client);
 
                     }
@@ -162,6 +170,22 @@ namespace DesktopSharing_Server
                             }
                             break;
                         }
+                    case ((int)Desktop_Sharing_Shared.Message_Types.FILE):
+                        {
+                            if(FileReceivedEvent != null)
+                            {
+                                FileReceivedEvent(Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]), ms.Blocks[2]);
+                            }
+                            break;
+                        }
+                    case ((int)Desktop_Sharing_Shared.Message_Types.FOLDER):
+                        {
+                            if(FolderReceivedEvent != null)
+                            {
+                                FolderReceivedEvent(Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]));
+                            }
+                            break;
+                        }
                     default:
                         break;
                 }
@@ -170,14 +194,14 @@ namespace DesktopSharing_Server
                 Debug.WriteLine(e.Message);
             }
         }
-        private void SendPass(Secure_Stream client)
+        private void SendPass(Secure_Stream client, bool sendsyncscreen = false)
         {
 
             try
             {
 
                 var img = Desktop_Sharing_Shared.ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
-                if(_LastImage == null)
+                if(_LastImage == null || sendsyncscreen)
                 {
 
                     var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE);
@@ -195,7 +219,6 @@ namespace DesktopSharing_Server
                     var rect = Desktop_Sharing_Shared.Bitmap_Helper.Get_Diff(_LastImage, img);
                     if(rect.Width > 0 && rect.Height > 0)
                     {
-
                         using(var updateregion = img.Clone(rect, img.PixelFormat))
                         {
 
@@ -210,7 +233,6 @@ namespace DesktopSharing_Server
                             client.Encrypt_And_Send(ms);
                         }
                     }
-
                     _LastImage.Dispose();
                 }
                 _LastImage = img;

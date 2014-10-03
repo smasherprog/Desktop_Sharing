@@ -17,12 +17,15 @@ namespace SecureTcp
         byte[] _Buffer;
         public long Received_Total;
         public long Sent_Total;
-        private long _Last_Received_BPS;
-        public long Received_BPS;
-        private long _Last_Sent_BPS;
-        public long Sent_BPS;
 
-        private DateTime _SecondCounter = DateTime.Now;
+        public long Received_BPS = 1024 * 100;
+        public long Sent_BPS = 1024 * 100;
+
+        private List<long> _Bytes_Received_in_Window;
+        private List<long> _Bytes_Sent_in_Window;
+
+        private const int _Window_Size = 5000;//5 seconds
+        private DateTime _WindowCounter = DateTime.Now;
 
         public Secure_Stream(TcpClient c, byte[] sessionkey)
         {
@@ -31,6 +34,8 @@ namespace SecureTcp
             _Buffer = new byte[_Buffer_Size];// 8 megabytes buffer
             _MySessionKey = sessionkey;
             Sent_BPS = Received_BPS=Sent_Total = Received_Total = 0;
+            _Bytes_Received_in_Window = new List<long>();
+            _Bytes_Sent_in_Window = new List<long>();
         }
         public void Dispose()
         {
@@ -41,9 +46,9 @@ namespace SecureTcp
         public void Encrypt_And_Send(Tcp_Message m)
         {
 
-            Write(m, Client.GetStream()); 
+            Write(m, Client.GetStream());
             var l = m.length;
-            _Last_Sent_BPS += l;
+            _Bytes_Sent_in_Window.Add(l);
             Sent_Total += l;
             UpdateCounters();
         }
@@ -52,23 +57,24 @@ namespace SecureTcp
             var r= Read(Client.GetStream());
             var l = r.length;
             Received_Total += l;
-            _Last_Received_BPS += l;
+            _Bytes_Received_in_Window.Add(l);
             UpdateCounters();
             return r;
         }
+
         private void UpdateCounters()
         {
-            if((DateTime.Now - _SecondCounter).TotalMilliseconds > 1000)
+            if((DateTime.Now - _WindowCounter).TotalMilliseconds > _Window_Size)
             {
-                Sent_BPS= _Last_Sent_BPS;
-                Received_BPS = _Last_Received_BPS;
+                Sent_BPS = (int)(((double)_Bytes_Sent_in_Window.Sum()) / ((double)(_Window_Size / 1000)));
+                Received_BPS = (int)(((double)_Bytes_Received_in_Window.Sum()) / ((double)(_Window_Size / 1000)));
 
                 Debug.WriteLine("Received: " + SizeSuffix(Received_BPS));
                 Debug.WriteLine("Sent: " + SizeSuffix(Sent_BPS));
-               
 
-                _Last_Received_BPS = _Last_Sent_BPS = 0;
-                _SecondCounter = DateTime.Now;
+                _Bytes_Received_in_Window.Clear();
+                _Bytes_Sent_in_Window.Clear();
+                _WindowCounter = DateTime.Now;
             }
         }
         static readonly string[] SizeSuffixes = { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };

@@ -22,7 +22,7 @@ namespace Desktop_Sharing_Shared.Input
         public const int WM_MOUSEWHEEL = 522;
         public const int WM_KEYDOWN = 0x100;
         public const int WM_KEYUP = 0x101;
-      
+
         public enum WinFormMouseEventFlags : int
         {
             LEFTDOWN = WM_LBUTTONDOWN,
@@ -46,8 +46,8 @@ namespace Desktop_Sharing_Shared.Input
         private static extern void mouse_event(PInvoke_MouseEventFlags dwFlags, uint dx, uint dy, uint dwData, uint dwExtraInfo);
 
         public static void SendMouseEvent(WinFormMouseEventFlags msg, int x, int y, int wheel_delta)
-        { 
-         
+        {
+
             var command = PInvoke_MouseEventFlags.LEFTDOWN;
             if(msg == WinFormMouseEventFlags.MOVE)
                 command = PInvoke_MouseEventFlags.MOVE | PInvoke_MouseEventFlags.ABSOLUTE;
@@ -71,7 +71,7 @@ namespace Desktop_Sharing_Shared.Input
                 command = PInvoke_MouseEventFlags.XUP;
             mouse_event(command, (uint)x, (uint)y, (uint)wheel_delta, 0);
 
-           // Console.WriteLine("Received Mouse event " + command + " " + ((uint)x) + " " + ((uint)y) + " " + ((uint)wheel_delta));
+            // Console.WriteLine("Received Mouse event " + command + " " + ((uint)x) + " " + ((uint)y) + " " + ((uint)wheel_delta));
         }
         [Flags]
         public enum PInvoke_MouseEventFlags : uint
@@ -96,7 +96,7 @@ namespace Desktop_Sharing_Shared.Input
         public enum PInvoke_KeyState : int
         {
             UP = 0x0002,
-            DOWN =0
+            DOWN = 0
         }
 
         public delegate void KeyEventHandler(int bVk, PInvoke_KeyState s);
@@ -105,6 +105,32 @@ namespace Desktop_Sharing_Shared.Input
             var scan = MapVirtualKey(bVk, 0);
             //Console.WriteLine("Received " + bVk + " in state " + s +  "  scan code is " + scan);
             keybd_event((byte)bVk, (byte)scan, (int)s, 0);
+        }
+        public delegate void FileReceivedHandler(string filename, byte[] file);
+        public static void FileEvent(string filename, byte[] file)
+        {
+            try
+            {
+                string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                System.IO.File.WriteAllBytes(path + "\\" + filename, file);
+            } catch(Exception e)
+            {
+                Debug.WriteLine(e.Message);
+            }
+
+        }
+        public delegate void FolderReceivedHandler(string relativefolderpath);
+        public static void FolderEvent(string relativefolderpath)
+        {
+            try
+            {
+                string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                System.IO.Directory.CreateDirectory(path + "\\"+ relativefolderpath);
+            } catch(Exception e)
+            {
+                Debug.WriteLine(e.Message);
+            }
+
         }
     }
 }
