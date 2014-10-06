@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Management;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -22,6 +23,9 @@ namespace DesktopSharing_Server
         Status Running = Status.Stopped;
         Bitmap _LastImage = null;
         //Receiver pipe = new Receiver();
+        bool _RunningAsService;
+        string _UserName;
+        IntPtr _Current_Desktop;
 
         ImageCodecInfo jgpEncoder;
         EncoderParameters myEncoderParameters;
@@ -53,18 +57,34 @@ namespace DesktopSharing_Server
             Debug.WriteLine(data);
             return "";
         }
+
         public void OnStart()
         {
+            _RunningAsService = !Environment.UserInteractive;
+
             OnStop();//just in case
             Running = Status.Starting;
+            _Current_Desktop = Desktop_Sharing_Shared.Input.PInvoke.GetInputDesktop();
             _Network_Thread = new System.Threading.Thread(new System.Threading.ThreadStart(RunNetwork));
             _Network_Thread.Start();
+            using(var searcher = new ManagementObjectSearcher("SELECT UserName FROM Win32_ComputerSystem"))
+            {
+                using(var collection = searcher.Get())
+                {
+                    var s = ((string)collection.Cast<ManagementBaseObject>().First()["UserName"]).Split('\\');
+                    if(s.Length > 1)
+                        _UserName = s.LastOrDefault();
+                    else
+                        _UserName = s.FirstOrDefault();
+                }
+            }
 
         }
         public void OnStop()
         {
             Running = Status.ShuttingDown;
             Stop(_Network_Thread);
+            Desktop_Sharing_Shared.Input.PInvoke.CloseDesktop(_Current_Desktop);
             if(_LastImage != null)
                 _LastImage.Dispose();
             _LastImage = null;
@@ -88,7 +108,7 @@ namespace DesktopSharing_Server
         {
             Debug.WriteLine("Starting Network Thread");
             Running = Status.Running;
-
+          
             try
             {
                 using(var _Secure_Listener = new Secure_Tcp_Listener(Directory.GetCurrentDirectory() + "\\privatekey.xml", 6000))
@@ -96,6 +116,13 @@ namespace DesktopSharing_Server
                     Secure_Stream client = null;
                     while(Running == Status.Running)
                     {
+
+
+                        //if(Desktop_Sharing_Shared.Input.PInvoke.IsWorkstationLocked())
+                        //{
+                        //    Desktop_Sharing_Shared.Input.PInvoke.SetWinLogin();
+                        //}
+
                         bool newclient = false;
                         try
                         {
@@ -127,7 +154,7 @@ namespace DesktopSharing_Server
                             continue;
                         SendPass(client, newclient);
                         ReceivePass(client);
-
+                  
                     }
                 }
 
@@ -174,7 +201,8 @@ namespace DesktopSharing_Server
                         {
                             if(FileReceivedEvent != null)
                             {
-                                FileReceivedEvent(Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]), ms.Blocks[2]);
+
+                                FileReceivedEvent("c:\\users\\" + _UserName + "\\desktop\\" + Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]), ms.Blocks[2]);
                             }
                             break;
                         }
@@ -182,7 +210,7 @@ namespace DesktopSharing_Server
                         {
                             if(FolderReceivedEvent != null)
                             {
-                                FolderReceivedEvent(Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]));
+                                FolderReceivedEvent("c:\\users\\"+ _UserName+"\\desktop\\"+ Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]));
                             }
                             break;
                         }

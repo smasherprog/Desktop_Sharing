@@ -124,34 +124,32 @@ namespace DesktopSharing_Viewer.Code
             }
             lock(_OutGoingFilesLock)
             {
-
                 foreach(var item in _OutGoingFiles)
                 {
                     AddFileOrDirectory("", item);
                 }
+                _OutGoingFiles.Clear();
             }
         }
         private void AddFileOrDirectory(string root1, string fullpath)
         {
-            Debug.WriteLine("AddFileOrDirectory " + root1 + "       " + fullpath);
             if(Directory.Exists(fullpath))
             {
                 try
                 {
-                    //var di = new DirectoryInfo(fullpath);
-                    //var t = new SecureTcp.Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.FOLDER);
-                    //var foldername = root1 +di.Name;
-                    //t.Add_Block(Desktop_Sharing_Shared.Utilities.Format.GetBytes(foldername));
-                    //_OutGoingMessages.Add(t);
-                    //foreach(var item in di.GetDirectories())
-                    //{
-                    //    AddFileOrDirectory(foldername + "\\", item.FullName);
-                    //}
-                    //foreach(var item in di.GetFiles())
-                    //{
-                    //    AddFileOrDirectory(foldername + "\\", item.FullName);
-                    //}
-                    Debug.WriteLine("Not Implemented fully just yet.");
+                    var di = new DirectoryInfo(fullpath);
+                    var t = new SecureTcp.Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.FOLDER);
+                    var foldername = root1 + di.Name;
+                    t.Add_Block(Desktop_Sharing_Shared.Utilities.Format.GetBytes(foldername));
+                    _OutGoingMessages.Add(t);
+                    foreach(var item in di.GetDirectories())
+                    {
+                        AddFileOrDirectory(foldername + "\\", item.FullName);
+                    }
+                    foreach(var item in di.GetFiles())
+                    {
+                        AddFileOrDirectory(foldername + "\\", item.FullName);
+                    }
                 } catch(Exception e)
                 {
                     Debug.WriteLine(e.Message);

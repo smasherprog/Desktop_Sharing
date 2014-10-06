@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -38,6 +39,27 @@ namespace Desktop_Sharing_Shared.Input
             WHEEL = WM_MOUSEWHEEL,
             XDOWN = WM_LBUTTONDOWN,
             XUP = WM_LBUTTONUP
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT
+        {
+            public int X;
+            public int Y;
+
+            public static implicit operator System.Drawing.Point(POINT point)
+            {
+                return new System.Drawing.Point(point.X, point.Y);
+            }
+        }
+        [DllImport("user32.dll")]
+        public static extern bool GetCursorPos(out POINT lpPoint);
+
+        public static System.Drawing.Point GetCursorPosition()
+        {
+            POINT lpPoint;
+            GetCursorPos(out lpPoint);
+            return lpPoint;
         }
 
         public delegate void MouseEventHandler(WinFormMouseEventFlags msg, int x, int y, int wheel_delta);
@@ -111,8 +133,7 @@ namespace Desktop_Sharing_Shared.Input
         {
             try
             {
-                string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                System.IO.File.WriteAllBytes(path + "\\" + filename, file);
+                System.IO.File.WriteAllBytes(filename, file);
             } catch(Exception e)
             {
                 Debug.WriteLine(e.Message);
@@ -124,13 +145,184 @@ namespace Desktop_Sharing_Shared.Input
         {
             try
             {
-                string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                System.IO.Directory.CreateDirectory(path + "\\"+ relativefolderpath);
+                System.IO.Directory.CreateDirectory(relativefolderpath);
             } catch(Exception e)
             {
                 Debug.WriteLine(e.Message);
             }
 
         }
+        [Flags]
+        public enum ACCESS_MASK : uint
+        {
+            DELETE = 0x00010000,
+            READ_CONTROL = 0x00020000,
+            WRITE_DAC = 0x00040000,
+            WRITE_OWNER = 0x00080000,
+            SYNCHRONIZE = 0x00100000,
+
+            STANDARD_RIGHTS_REQUIRED = 0x000F0000,
+
+            STANDARD_RIGHTS_READ = 0x00020000,
+            STANDARD_RIGHTS_WRITE = 0x00020000,
+            STANDARD_RIGHTS_EXECUTE = 0x00020000,
+
+            STANDARD_RIGHTS_ALL = 0x001F0000,
+
+            SPECIFIC_RIGHTS_ALL = 0x0000FFFF,
+
+            ACCESS_SYSTEM_SECURITY = 0x01000000,
+
+            MAXIMUM_ALLOWED = 0x02000000,
+
+            GENERIC_READ = 0x80000000,
+            GENERIC_WRITE = 0x40000000,
+            GENERIC_EXECUTE = 0x20000000,
+            GENERIC_ALL = 0x10000000,
+
+            DESKTOP_READOBJECTS = 0x00000001,
+            DESKTOP_CREATEWINDOW = 0x00000002,
+            DESKTOP_CREATEMENU = 0x00000004,
+            DESKTOP_HOOKCONTROL = 0x00000008,
+            DESKTOP_JOURNALRECORD = 0x00000010,
+            DESKTOP_JOURNALPLAYBACK = 0x00000020,
+            DESKTOP_ENUMERATE = 0x00000040,
+            DESKTOP_WRITEOBJECTS = 0x00000080,
+            DESKTOP_SWITCHDESKTOP = 0x00000100,
+
+            WINSTA_ENUMDESKTOPS = 0x00000001,
+            WINSTA_READATTRIBUTES = 0x00000002,
+            WINSTA_ACCESSCLIPBOARD = 0x00000004,
+            WINSTA_CREATEDESKTOP = 0x00000008,
+            WINSTA_WRITEATTRIBUTES = 0x00000010,
+            WINSTA_ACCESSGLOBALATOMS = 0x00000020,
+            WINSTA_EXITWINDOWS = 0x00000040,
+            WINSTA_ENUMERATE = 0x00000100,
+            WINSTA_READSCREEN = 0x00000200,
+
+            WINSTA_ALL_ACCESS = 0x0000037F
+        }
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [System.Runtime.ConstrainedExecution.ReliabilityContract(System.Runtime.ConstrainedExecution.Consistency.WillNotCorruptState, System.Runtime.ConstrainedExecution.Cer.MayFail)]
+        [DllImport("user32", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern bool CloseWindowStation(IntPtr hWinsta);
+        public sealed class SafeWindowStationHandle : Microsoft.Win32.SafeHandles.SafeHandleZeroOrMinusOneIsInvalid
+        {
+            public SafeWindowStationHandle() : base(true) { }
+            protected override bool ReleaseHandle() { return CloseWindowStation(handle); }
+        }
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool SetProcessWindowStation(IntPtr hWinSta);
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern IntPtr OpenDesktop(string lpszDesktop, uint dwFlags, bool fInherit, ACCESS_MASK dwDesiredAccess);
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool SetThreadDesktop(IntPtr hDesktop);
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool CloseDesktop(IntPtr hDesktop);
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, ACCESS_MASK dwDesiredAccess);
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern IntPtr GetThreadDesktop(uint dwThreadId);
+        [DllImport("kernel32.dll")]
+        static extern uint GetCurrentThreadId();
+
+        [System.Runtime.ConstrainedExecution.ReliabilityContract(System.Runtime.ConstrainedExecution.Consistency.WillNotCorruptState, System.Runtime.ConstrainedExecution.Cer.MayFail)]
+        [DllImport("user32", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern SafeWindowStationHandle OpenWindowStation([MarshalAs(UnmanagedType.LPTStr)] string lpszWinSta, [MarshalAs(UnmanagedType.Bool)]  bool fInherit, ACCESS_MASK dwDesiredAccess);
+
+        public static bool SetWinSta0Desktop(string szDesktopName)
+        {
+            var bSuccess = false;
+
+            var hWinSta0 = OpenWindowStation("WinSta0", false, ACCESS_MASK.MAXIMUM_ALLOWED);
+            if(null == hWinSta0) { Debug.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); }
+
+            bSuccess = SetProcessWindowStation(hWinSta0.DangerousGetHandle());
+            if(!bSuccess) { Debug.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); }
+
+            var hDesk = OpenDesktop(szDesktopName, 0, false, ACCESS_MASK.MAXIMUM_ALLOWED);
+            if(IntPtr.Zero == hDesk) { Debug.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); }
+
+            bSuccess = SetThreadDesktop(hDesk);
+            if(!bSuccess) { Debug.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); }
+
+            if(hDesk != null) { CloseDesktop(hDesk); }
+            if(hWinSta0 != null) { hWinSta0.Dispose(); }
+
+            return bSuccess;
+        }
+        public static bool SetWinLogin()
+        {
+            var bSuccess = false;
+            var old_desktop = GetThreadDesktop(GetCurrentThreadId());
+
+            IntPtr hwnd = OpenInputDesktop(0, false, ACCESS_MASK.DESKTOP_SWITCHDESKTOP);
+            if(IntPtr.Zero == hwnd) { Debug.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); }
+
+            bSuccess = SetThreadDesktop(hwnd);
+            if(!bSuccess) { Debug.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); } else
+                Debug.WriteLine("Changed Successfully");
+            if(hwnd != null) { CloseDesktop(hwnd); }
+
+            bSuccess = SetThreadDesktop(old_desktop);
+            if(!bSuccess) { Debug.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); } else
+                Debug.WriteLine("Changed back Successfully");
+
+            return bSuccess;
+        }
+        public static IntPtr GetInputDesktop()
+        {
+            return OpenInputDesktop(0, false, ACCESS_MASK.DESKTOP_CREATEMENU | ACCESS_MASK.DESKTOP_CREATEWINDOW |
+                ACCESS_MASK.DESKTOP_ENUMERATE | ACCESS_MASK.DESKTOP_HOOKCONTROL |
+                ACCESS_MASK.DESKTOP_WRITEOBJECTS | ACCESS_MASK.DESKTOP_READOBJECTS |
+                ACCESS_MASK.DESKTOP_SWITCHDESKTOP | ACCESS_MASK.GENERIC_WRITE);
+        }
+        public static IntPtr SwitchToInputDesktop(IntPtr olddesktop)
+        {
+            var inp = GetInputDesktop();
+            if(olddesktop == inp)
+            {
+                CloseDesktop(inp);
+                return olddesktop;
+            }
+            CloseDesktop(olddesktop);
+
+            SetThreadDesktop(inp);
+            return inp;
+        }
+        [DllImport("user32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SwitchDesktop(IntPtr hDesktop);
+
+        public static bool IsWorkstationLocked()
+        {
+            IntPtr hwnd = OpenInputDesktop(0, false, ACCESS_MASK.DESKTOP_SWITCHDESKTOP);
+
+            if(hwnd == IntPtr.Zero)
+            {
+                // Could not get the input desktop, might be locked already?
+                hwnd = OpenDesktop("Default", 0, false, ACCESS_MASK.DESKTOP_SWITCHDESKTOP);
+                Debug.WriteLine("Changed to Default");
+            }
+
+            // Can we switch the desktop?
+            if(hwnd != IntPtr.Zero)
+            {
+                if(SwitchDesktop(hwnd))
+                {
+                    // Workstation is NOT LOCKED.
+                    CloseDesktop(hwnd);
+                } else
+                {
+                    CloseDesktop(hwnd);
+                    // Workstation is LOCKED.
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+
     }
 }
