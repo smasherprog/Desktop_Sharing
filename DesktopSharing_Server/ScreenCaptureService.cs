@@ -29,6 +29,7 @@ namespace DesktopSharing_Server
 
         ImageCodecInfo jgpEncoder;
         EncoderParameters myEncoderParameters;
+        string WorkingDirectory;
 
         public event Desktop_Sharing_Shared.Input.PInvoke.MouseEventHandler InputMouseEvent;
         public event Desktop_Sharing_Shared.Input.PInvoke.KeyEventHandler InputKeyEvent;
@@ -50,7 +51,7 @@ namespace DesktopSharing_Server
             //pipe.Data += new DesktopService_API.DataIsReady(DataBeingRecieved);
             //if(pipe.ServiceOn() == false)
             //    MessageBox.Show(pipe.error.Message);
-
+            WorkingDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
         }
         string DataBeingRecieved(string data)
         {
@@ -60,13 +61,9 @@ namespace DesktopSharing_Server
 
         public void OnStart()
         {
-            _RunningAsService = !Environment.UserInteractive;
 
             OnStop();//just in case
-            Running = Status.Starting;
-            _Current_Desktop = Desktop_Sharing_Shared.Input.PInvoke.GetInputDesktop();
-            _Network_Thread = new System.Threading.Thread(new System.Threading.ThreadStart(RunNetwork));
-            _Network_Thread.Start();
+            _RunningAsService = !Environment.UserInteractive;
             using(var searcher = new ManagementObjectSearcher("SELECT UserName FROM Win32_ComputerSystem"))
             {
                 using(var collection = searcher.Get())
@@ -79,6 +76,9 @@ namespace DesktopSharing_Server
                 }
             }
 
+            Running = Status.Starting;
+            _Network_Thread = new System.Threading.Thread(new System.Threading.ThreadStart(RunNetwork));
+            _Network_Thread.Start();
         }
         public void OnStop()
         {
@@ -108,11 +108,13 @@ namespace DesktopSharing_Server
         {
             Debug.WriteLine("Starting Network Thread");
             Running = Status.Running;
-          
+            //Desktop_Sharing_Shared.Input.PInvoke.SetWinSta0Desktop("Default");
+       
             try
             {
-                using(var _Secure_Listener = new Secure_Tcp_Listener(Directory.GetCurrentDirectory() + "\\privatekey.xml", 6000))
+                using(var _Secure_Listener = new Secure_Tcp_Listener(WorkingDirectory + "\\privatekey.xml", 6000))
                 {
+
                     Secure_Stream client = null;
                     while(Running == Status.Running)
                     {
@@ -130,6 +132,7 @@ namespace DesktopSharing_Server
                             {
                                 client = _Secure_Listener.AcceptTcpClient();
                                 newclient = true;
+  
                             }
                         } catch(Exception e)
                         {
@@ -154,14 +157,16 @@ namespace DesktopSharing_Server
                             continue;
                         SendPass(client, newclient);
                         ReceivePass(client);
-                  
+
                     }
                 }
+
 
             } catch(Exception e)
             {
                 Debug.WriteLine(e.Message);
             }
+
             Running = Status.Stopped;
             Debug.WriteLine("Finished Network Thread");
         }
@@ -210,7 +215,7 @@ namespace DesktopSharing_Server
                         {
                             if(FolderReceivedEvent != null)
                             {
-                                FolderReceivedEvent("c:\\users\\"+ _UserName+"\\desktop\\"+ Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]));
+                                FolderReceivedEvent("c:\\users\\" + _UserName + "\\desktop\\" + Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]));
                             }
                             break;
                         }

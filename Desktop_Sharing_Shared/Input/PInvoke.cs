@@ -229,6 +229,46 @@ namespace Desktop_Sharing_Shared.Input
         [System.Runtime.ConstrainedExecution.ReliabilityContract(System.Runtime.ConstrainedExecution.Consistency.WillNotCorruptState, System.Runtime.ConstrainedExecution.Cer.MayFail)]
         [DllImport("user32", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern SafeWindowStationHandle OpenWindowStation([MarshalAs(UnmanagedType.LPTStr)] string lpszWinSta, [MarshalAs(UnmanagedType.Bool)]  bool fInherit, ACCESS_MASK dwDesiredAccess);
+        // Switches the current thread into a different desktop, by name
+        // Calling with a valid desktop name will place the thread in that desktop.
+        // Calling with a NULL name will place the thread in the current input desktop.
+        public static bool SelectDesktop(string name, ref IntPtr new_desktop)
+        {
+            IntPtr desktop = IntPtr.Zero;
+            if(!string.IsNullOrEmpty(name))
+            {
+                // Attempt to open the named desktop
+                desktop = OpenDesktop(name, 0, false,
+                    ACCESS_MASK.DESKTOP_CREATEMENU | ACCESS_MASK.DESKTOP_CREATEWINDOW |
+                    ACCESS_MASK.DESKTOP_ENUMERATE | ACCESS_MASK.DESKTOP_HOOKCONTROL |
+                    ACCESS_MASK.DESKTOP_WRITEOBJECTS | ACCESS_MASK.DESKTOP_READOBJECTS |
+                    ACCESS_MASK.DESKTOP_SWITCHDESKTOP | ACCESS_MASK.GENERIC_WRITE);
+            } else
+            {
+                // No, so open the input desktop
+                desktop = OpenInputDesktop(0, false,
+                        ACCESS_MASK.DESKTOP_CREATEMENU | ACCESS_MASK.DESKTOP_CREATEWINDOW |
+                    ACCESS_MASK.DESKTOP_ENUMERATE | ACCESS_MASK.DESKTOP_HOOKCONTROL |
+                    ACCESS_MASK.DESKTOP_WRITEOBJECTS | ACCESS_MASK.DESKTOP_READOBJECTS |
+                    ACCESS_MASK.DESKTOP_SWITCHDESKTOP | ACCESS_MASK.GENERIC_WRITE);
+            }
+            if(desktop == IntPtr.Zero)
+                return false;
+            if(!SetThreadDesktop(desktop))
+            {
+               //Failed to enter the new desktop, so free it!
+                CloseDesktop(desktop);
+                return false;
+            }
+           
+            if(new_desktop != IntPtr.Zero)
+            {
+                CloseDesktop(new_desktop);
+                new_desktop = desktop;
+            }
+            return true;
+        }
+        private static IntPtr CurrentDesktop = IntPtr.Zero;
 
         public static bool SetWinSta0Desktop(string szDesktopName)
         {
@@ -239,18 +279,20 @@ namespace Desktop_Sharing_Shared.Input
 
             bSuccess = SetProcessWindowStation(hWinSta0.DangerousGetHandle());
             if(!bSuccess) { Debug.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); }
+            if(CurrentDesktop != IntPtr.Zero)
+                CloseDesktop(CurrentDesktop);
 
-            var hDesk = OpenDesktop(szDesktopName, 0, false, ACCESS_MASK.MAXIMUM_ALLOWED);
-            if(IntPtr.Zero == hDesk) { Debug.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); }
+            CurrentDesktop = OpenDesktop(szDesktopName, 0, false, ACCESS_MASK.MAXIMUM_ALLOWED);
+            if(IntPtr.Zero == CurrentDesktop) { Debug.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); }
 
-            bSuccess = SetThreadDesktop(hDesk);
+            bSuccess = SetThreadDesktop(CurrentDesktop);
             if(!bSuccess) { Debug.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); }
 
-            if(hDesk != null) { CloseDesktop(hDesk); }
             if(hWinSta0 != null) { hWinSta0.Dispose(); }
 
             return bSuccess;
         }
+
         public static bool SetWinLogin()
         {
             var bSuccess = false;
@@ -272,10 +314,7 @@ namespace Desktop_Sharing_Shared.Input
         }
         public static IntPtr GetInputDesktop()
         {
-            return OpenInputDesktop(0, false, ACCESS_MASK.DESKTOP_CREATEMENU | ACCESS_MASK.DESKTOP_CREATEWINDOW |
-                ACCESS_MASK.DESKTOP_ENUMERATE | ACCESS_MASK.DESKTOP_HOOKCONTROL |
-                ACCESS_MASK.DESKTOP_WRITEOBJECTS | ACCESS_MASK.DESKTOP_READOBJECTS |
-                ACCESS_MASK.DESKTOP_SWITCHDESKTOP | ACCESS_MASK.GENERIC_WRITE);
+            return OpenInputDesktop(0, false, ACCESS_MASK.MAXIMUM_ALLOWED);
         }
         public static IntPtr SwitchToInputDesktop(IntPtr olddesktop)
         {
