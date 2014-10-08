@@ -1,10 +1,10 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30501.0
+VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopSharing_Server", "DesktopSharing_Server\DesktopSharing_Server.csproj", "{F1B0F688-0745-4F46-B06D-30392C625444}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopSharingService", "DesktopSharingStarter\DesktopSharingService.csproj", "{6E417B2C-F606-4193-9361-FCD1E11DF410}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopSharingServiceMonitor", "DesktopSharingStarter\DesktopSharingServiceMonitor.csproj", "{6E417B2C-F606-4193-9361-FCD1E11DF410}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureTcp", "SSLTcp\SecureTcp.csproj", "{A16D46D3-C103-4C9B-84DA-17DCFD29F9E6}"
 EndProject

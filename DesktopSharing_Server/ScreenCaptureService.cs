@@ -25,10 +25,9 @@ namespace DesktopSharing_Server
         //Receiver pipe = new Receiver();
         bool _RunningAsService;
         string _UserName;
-        IntPtr _Current_Desktop;
-
-        ImageCodecInfo jgpEncoder;
-        EncoderParameters myEncoderParameters;
+        Desktop_Sharing_Shared.Input.DesktopSwitcher _Current_Desktop = new Desktop_Sharing_Shared.Input.DesktopSwitcher();
+        Desktop_Sharing_Shared.ScreenCapture _ScreenCapture = new Desktop_Sharing_Shared.ScreenCapture();
+ 
         string WorkingDirectory;
 
         public event Desktop_Sharing_Shared.Input.PInvoke.MouseEventHandler InputMouseEvent;
@@ -39,11 +38,7 @@ namespace DesktopSharing_Server
         public ScreenCaptureService()
         {
             _Network_Thread = null;
-            jgpEncoder = GetEncoder(ImageFormat.Jpeg);
-            var myEncoder = System.Drawing.Imaging.Encoder.Quality;
-            var myEncoderParameter = new EncoderParameter(myEncoder, 60L);
-            myEncoderParameters = new EncoderParameters(1);
-            myEncoderParameters.Param[0] = myEncoderParameter;
+   
             InputMouseEvent += Desktop_Sharing_Shared.Input.PInvoke.SendMouseEvent;
             InputKeyEvent += Desktop_Sharing_Shared.Input.PInvoke.KeyEvent;
             FileReceivedEvent += Desktop_Sharing_Shared.Input.PInvoke.FileEvent;
@@ -61,7 +56,6 @@ namespace DesktopSharing_Server
 
         public void OnStart()
         {
-
             OnStop();//just in case
             _RunningAsService = !Environment.UserInteractive;
             using(var searcher = new ManagementObjectSearcher("SELECT UserName FROM Win32_ComputerSystem"))
@@ -77,14 +71,15 @@ namespace DesktopSharing_Server
             }
 
             Running = Status.Starting;
-            _Network_Thread = new System.Threading.Thread(new System.Threading.ThreadStart(RunNetwork));
-            _Network_Thread.Start();
+            
+          //  _Network_Thread = new System.Threading.Thread(new System.Threading.ThreadStart(RunNetwork));
+          //  _Network_Thread.Start();
+            RunNetwork();
         }
         public void OnStop()
         {
             Running = Status.ShuttingDown;
-            Stop(_Network_Thread);
-            Desktop_Sharing_Shared.Input.PInvoke.CloseDesktop(_Current_Desktop);
+          // Stop(_Network_Thread);
             if(_LastImage != null)
                 _LastImage.Dispose();
             _LastImage = null;
@@ -106,24 +101,30 @@ namespace DesktopSharing_Server
 
         private void RunNetwork()
         {
-            Debug.WriteLine("Starting Network Thread");
+            Console.WriteLine("Starting Network Thread");
             Running = Status.Running;
-            //Desktop_Sharing_Shared.Input.PInvoke.SetWinSta0Desktop("Default");
-       
             try
             {
                 using(var _Secure_Listener = new Secure_Tcp_Listener(WorkingDirectory + "\\privatekey.xml", 6000))
                 {
-
+                    bool locked = false;
                     Secure_Stream client = null;
                     while(Running == Status.Running)
                     {
 
 
-                        //if(Desktop_Sharing_Shared.Input.PInvoke.IsWorkstationLocked())
-                        //{
-                        //    Desktop_Sharing_Shared.Input.PInvoke.SetWinLogin();
-                        //}
+                        if(!locked)
+                        {
+                            locked = true;
+                            Console.WriteLine("Console locked detected");
+                            if(_Current_Desktop.SelectDesktop("winlogin"))
+                            {
+                                Console.WriteLine("Successfuly changed desktops");
+                            }else 
+                            {
+                                Console.WriteLine("Failed changed desktops");
+                            }
+                        }
 
                         bool newclient = false;
                         try
@@ -233,14 +234,14 @@ namespace DesktopSharing_Server
             try
             {
 
-                var img = Desktop_Sharing_Shared.ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
+                var img = _ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
                 if(_LastImage == null || sendsyncscreen)
                 {
 
                     var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE);
                     using(var memorys = new MemoryStream())
                     {
-                        img.Save(memorys, jgpEncoder, myEncoderParameters);
+                        img.Save(memorys, _ScreenCapture.jgpEncoder, _ScreenCapture.EncoderParameters);
                         ms.Add_Block(memorys.ToArray());
                     }
                     Debug.WriteLine("Sending RESOLUTION_CHANGE image to client");
@@ -259,7 +260,7 @@ namespace DesktopSharing_Server
                             ms.Add_Block(BitConverter.GetBytes(rect.Left));
                             using(var memorys = new MemoryStream())
                             {
-                                updateregion.Save(memorys, jgpEncoder, myEncoderParameters);
+                                updateregion.Save(memorys, _ScreenCapture.jgpEncoder, _ScreenCapture.EncoderParameters);
                                 ms.Add_Block(memorys.ToArray());
                             }
                             Debug.WriteLine("Sending UPDATE_REGION image to client " + rect.Top + " " + rect.Left);
@@ -277,19 +278,6 @@ namespace DesktopSharing_Server
             }
 
         }
-        private ImageCodecInfo GetEncoder(ImageFormat format)
-        {
-
-            ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
-
-            foreach(ImageCodecInfo codec in codecs)
-            {
-                if(codec.FormatID == format.Guid)
-                {
-                    return codec;
-                }
-            }
-            return null;
-        }
+  
     }
 }

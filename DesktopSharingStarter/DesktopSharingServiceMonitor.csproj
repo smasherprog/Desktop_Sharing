@@ -7,8 +7,8 @@
     <ProjectGuid>{6E417B2C-F606-4193-9361-FCD1E11DF410}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DesktopSharingService</RootNamespace>
-    <AssemblyName>DesktopSharingService</AssemblyName>
+    <RootNamespace>DesktopSharingServiceMonitor</RootNamespace>
+    <AssemblyName>DesktopSharingServiceMonitor</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -74,6 +74,7 @@
     <Compile Include="Service1.designer.cs">
       <DependentUpon>Service1.cs</DependentUpon>
     </Compile>
+    <Compile Include="Toolkit.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

@@ -14,8 +14,9 @@ namespace DesktopSharingStarter
         static void Main(string[] args)
         {
             var ServicesToRun = new List<ServiceBase>();
-            ServicesToRun.Add(new Client_Service.Service1(new DesktopSharing_Server.ScreenCaptureService()));
+            ServicesToRun.Add(new Client_Service.Service1());
 
+            var par = string.Concat(args);
 
             //if started by a user
             if(Environment.UserInteractive)
@@ -25,7 +26,7 @@ namespace DesktopSharingStarter
                 WindowsService.Interactive.Run(ServicesToRun.ToArray());
 #else
                 //otherwise, install the application
-                var par = string.Concat(args);
+
                 switch(par)
                 {
                     case "--install":
@@ -45,6 +46,7 @@ namespace DesktopSharingStarter
 
                 ServiceBase.Run(ServicesToRun.ToArray());
             }
+
         }
     }
 }

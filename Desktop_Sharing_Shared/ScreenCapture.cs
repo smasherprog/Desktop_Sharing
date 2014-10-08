@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Desktop_Sharing_Shared
 {
-    public static class ScreenCapture
+    public class ScreenCapture
     {
         // P/Invoke declarations
         [DllImport("gdi32.dll")]
@@ -29,7 +30,21 @@ namespace Desktop_Sharing_Shared
         [DllImport("user32.dll")]
         static extern IntPtr GetWindowDC(IntPtr ptr);
 
-        public static Bitmap GetScreen(Size sz)
+        private ImageCodecInfo _jgpEncoder;
+        private EncoderParameters _myEncoderParameters;
+
+        public ImageCodecInfo jgpEncoder { get { return _jgpEncoder; } }
+        public EncoderParameters EncoderParameters { get { return _myEncoderParameters; } }
+
+        public ScreenCapture(long jpgquality=60L)
+        {
+            _jgpEncoder = GetEncoder(ImageFormat.Jpeg);
+            var myEncoder = System.Drawing.Imaging.Encoder.Quality;
+            var myEncoderParameter = new EncoderParameter(myEncoder, jpgquality);
+            _myEncoderParameters = new EncoderParameters(1);
+            _myEncoderParameters.Param[0] = myEncoderParameter;
+        }
+        public Bitmap GetScreen(Size sz)
         {
 
             //Bitmap bmpScreenCapture = new Bitmap(Screen.PrimaryScreen.Bounds.Width,
@@ -72,7 +87,20 @@ namespace Desktop_Sharing_Shared
             }
             return new Bitmap(sz.Height, sz.Width);
         }
+        private ImageCodecInfo GetEncoder(ImageFormat format)
+        {
 
+            ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
+
+            foreach(ImageCodecInfo codec in codecs)
+            {
+                if(codec.FormatID == format.Guid)
+                {
+                    return codec;
+                }
+            }
+            return null;
+        }
 
     }
 }

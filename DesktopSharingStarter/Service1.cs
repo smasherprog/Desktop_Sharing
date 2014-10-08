@@ -12,20 +12,19 @@ namespace Client_Service
 {
     public partial class Service1 : ServiceBase
     {
-        private object _ServiceToRun;
-        public Service1(object obj)
+        public Service1()
         {
             InitializeComponent();
-            _ServiceToRun = obj;
         }
         protected override void OnStart(string[] args)
         {
-            _ServiceToRun.GetType().GetMethod("OnStart").Invoke(_ServiceToRun, null);
+            DesktopSharingServiceMonitor.Toolkit.ApplicationLoader.PROCESS_INFORMATION proc;
+            DesktopSharingServiceMonitor.Toolkit.ApplicationLoader.StartProcessAndBypassUAC(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location)+"\\DesktopSharing_Server.exe", out proc);
         }
 
         protected override void OnStop()
         {
-            _ServiceToRun.GetType().GetMethod("OnStop").Invoke(_ServiceToRun, null);
+
         }
 
     }
