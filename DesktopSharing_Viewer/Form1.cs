@@ -28,6 +28,7 @@ namespace DesktopSharing
             var t = new InputListener(pictureBox1.Handle);
             t.InputMouseEvent += _Viewer_Loop.OnMouseEvent;
             t.InputKeyEvent += _Viewer_Loop.OnKeyEvent;
+
             Application.AddMessageFilter(t);
             this.DragDrop += new DragEventHandler(this.Form1_DragDrop);
             this.DragEnter += new DragEventHandler(this.Form1_DragEnter);
@@ -76,6 +77,7 @@ namespace DesktopSharing
                 }
             });
         }
+
         private void New_Image(byte[] m)
         {
             pictureBox1.Invoke((MethodInvoker)delegate

@@ -10,19 +10,20 @@ namespace DesktopSharing_Viewer.Code
     public class InputListener : System.Windows.Forms.IMessageFilter
     {
         public event Desktop_Sharing_Shared.Input.PInvoke.MouseEventHandler InputMouseEvent;
-        public event Desktop_Sharing_Shared.Input.PInvoke.KeyEventHandler InputKeyEvent;
+        public event Desktop_Sharing_Shared.Keyboard.PInvoke.KeyEventHandler InputKeyEvent;
         private DateTime KeyboardSecondCounter = DateTime.Now;
         private DateTime MouseSecondCounter = DateTime.Now;
 
         private const int InputPerSec = 30;
         private List<int> Keys_Down;
-
+        private int _LastMsg, _LastX, _LastY, _Lastwheel;
 
         private IntPtr Handle;
         public InputListener(IntPtr handle)
         {
             Handle = handle;
             Keys_Down = new List<int>();
+            _LastMsg = _LastX = _LastY= _Lastwheel= 0;
         }
 
         public bool PreFilterMessage(ref System.Windows.Forms.Message m)
@@ -54,7 +55,7 @@ namespace DesktopSharing_Viewer.Code
                             //Debug.WriteLine("KeyUP");
                             Keys_Down.Remove(temp);//else its an up, so remove it
                         }
-                        InputKeyEvent(temp, m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_KEYDOWN ? Desktop_Sharing_Shared.Input.PInvoke.PInvoke_KeyState.DOWN : Desktop_Sharing_Shared.Input.PInvoke.PInvoke_KeyState.UP);
+                        InputKeyEvent(temp, m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_KEYDOWN ? Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState.DOWN : Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState.UP);
                         return true;
                     }
 
@@ -75,7 +76,15 @@ namespace DesktopSharing_Viewer.Code
                         uint xy = unchecked(IntPtr.Size == 8 ? (uint)m.WParam.ToInt64() : (uint)m.WParam.ToInt32());
                         wheel = unchecked((short)(xy >> 16));
                     }
-                    InputMouseEvent((Desktop_Sharing_Shared.Input.PInvoke.WinFormMouseEventFlags)m.Msg, p.X, p.Y, wheel);
+                    if(_LastMsg != m.Msg || p.X != _LastX || p.Y != _LastY || _Lastwheel != wheel)
+                    {
+                        InputMouseEvent((Desktop_Sharing_Shared.Input.PInvoke.WinFormMouseEventFlags)m.Msg, p.X, p.Y, wheel);
+                        _LastMsg = m.Msg;
+                        p.X = _LastX;
+                        p.Y = _LastY;
+                        _Lastwheel = wheel;
+                    }
+                    
                 }
                 // Debug.WriteLine("Mouse Event");
             }

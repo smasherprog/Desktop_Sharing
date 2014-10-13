@@ -11,7 +11,18 @@ namespace DesktopSharing_Viewer.Code
         public PictureBoxEx()
         {
             this.SetStyle(ControlStyles.Selectable, true);
-          
+            MouseEnter += PictureBoxEx_MouseEnter;
+            MouseLeave += PictureBoxEx_MouseLeave;
+        }
+
+        void PictureBoxEx_MouseLeave(object sender, EventArgs e)
+        {
+            Cursor.Show();
+        }
+
+        void PictureBoxEx_MouseEnter(object sender, EventArgs e)
+        {
+            Cursor.Hide();
         }
 
         protected override void OnClick(EventArgs e)

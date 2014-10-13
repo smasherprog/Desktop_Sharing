@@ -15,6 +15,7 @@ namespace DesktopSharing_Viewer.Code
         public Status Running = Status.Stopped;
         public Action<Point, byte[]> Update_Image;
         public Action<byte[]> New_Image;
+
         private List<SecureTcp.Tcp_Message> _OutGoingMessages;
         private object _OutGoingMessagesLock = new object();
 
@@ -58,7 +59,7 @@ namespace DesktopSharing_Viewer.Code
                 _OutGoingMessages.Add(t);
             }
         }
-        public void OnKeyEvent(int bVk, Desktop_Sharing_Shared.Input.PInvoke.PInvoke_KeyState s)
+        public void OnKeyEvent(int bVk, Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState s)
         {
             lock(_OutGoingMessagesLock)
             {
@@ -107,6 +108,8 @@ namespace DesktopSharing_Viewer.Code
                         New_Image(ms.Blocks[1]);
                         break;
                     }
+          
+                    
                 default:
                     break;
             }

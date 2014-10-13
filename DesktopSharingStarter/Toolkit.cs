@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -165,7 +166,7 @@ namespace DesktopSharingServiceMonitor
                         STARTUPINFO si = new STARTUPINFO();
                         si.cb = (int)Marshal.SizeOf(si);
                         si.lpDesktop = @"winsta0\default"; // interactive window station parameter; basically this indicates that the process created can display a GUI on the desktop
-
+                        f.WriteLine(@"winsta0\default ");
                         // flags that specify the priority and creation method of the process
                         int dwCreationFlags = NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW;
 
@@ -182,12 +183,16 @@ namespace DesktopSharingServiceMonitor
                                                         ref si,                 // pointer to STARTUPINFO structure
                                                         out procInfo            // receives information about new process
                                                         );
+                        if(!result)
+                        {
+                           f.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message); 
+                        }
                         f.WriteLine("CreateProcessAsUser ");
                         // invalidate the handles
                         CloseHandle(hProcess);
                         CloseHandle(hPToken);
                         CloseHandle(hUserTokenDup);
-
+                    
                         return result; // return the result
                     } catch(Exception e)
                     {

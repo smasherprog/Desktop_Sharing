@@ -19,34 +19,36 @@ namespace DesktopSharing_Server
     public class ScreenCaptureService
     {
         enum Status { Starting, Running, Stopped, ShuttingDown }
-        System.Threading.Thread _Network_Thread;
         Status Running = Status.Stopped;
         Bitmap _LastImage = null;
         //Receiver pipe = new Receiver();
         bool _RunningAsService;
         string _UserName;
         Desktop_Sharing_Shared.Input.DesktopSwitcher _Current_Desktop = new Desktop_Sharing_Shared.Input.DesktopSwitcher();
-        Desktop_Sharing_Shared.ScreenCapture _ScreenCapture = new Desktop_Sharing_Shared.ScreenCapture();
- 
+        Desktop_Sharing_Shared.Screen.ScreenCapture _ScreenCapture = null;
+
         string WorkingDirectory;
+        string _Users_DesktopPath;
+
 
         public event Desktop_Sharing_Shared.Input.PInvoke.MouseEventHandler InputMouseEvent;
-        public event Desktop_Sharing_Shared.Input.PInvoke.KeyEventHandler InputKeyEvent;
+        public event Desktop_Sharing_Shared.Keyboard.PInvoke.KeyEventHandler InputKeyEvent;
         public event Desktop_Sharing_Shared.Input.PInvoke.FileReceivedHandler FileReceivedEvent;
         public event Desktop_Sharing_Shared.Input.PInvoke.FolderReceivedHandler FolderReceivedEvent;
 
         public ScreenCaptureService()
-        {
-            _Network_Thread = null;
-   
+        {  
+            
+            _RunningAsService = System.Security.Principal.WindowsIdentity.GetCurrent().Name.ToLower() == "system";
             InputMouseEvent += Desktop_Sharing_Shared.Input.PInvoke.SendMouseEvent;
-            InputKeyEvent += Desktop_Sharing_Shared.Input.PInvoke.KeyEvent;
+            InputKeyEvent += Desktop_Sharing_Shared.Keyboard.PInvoke.KeyEvent;
             FileReceivedEvent += Desktop_Sharing_Shared.Input.PInvoke.FileEvent;
             FolderReceivedEvent += Desktop_Sharing_Shared.Input.PInvoke.FolderEvent;
             //pipe.Data += new DesktopService_API.DataIsReady(DataBeingRecieved);
             //if(pipe.ServiceOn() == false)
             //    MessageBox.Show(pipe.error.Message);
             WorkingDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
+          
         }
         string DataBeingRecieved(string data)
         {
@@ -57,7 +59,9 @@ namespace DesktopSharing_Server
         public void OnStart()
         {
             OnStop();//just in case
-            _RunningAsService = !Environment.UserInteractive;
+            _ScreenCapture = new Desktop_Sharing_Shared.Screen.ScreenCapture();
+            _Current_Desktop.BeginInteraction();
+
             using(var searcher = new ManagementObjectSearcher("SELECT UserName FROM Win32_ComputerSystem"))
             {
                 using(var collection = searcher.Get())
@@ -69,35 +73,24 @@ namespace DesktopSharing_Server
                         _UserName = s.FirstOrDefault();
                 }
             }
-
+            _Users_DesktopPath = @"c:\users\" + _UserName + @"\desktop\";
+     
+           // _Current_Desktop.SelectDesktop("winlogon");
             Running = Status.Starting;
-            
-          //  _Network_Thread = new System.Threading.Thread(new System.Threading.ThreadStart(RunNetwork));
-          //  _Network_Thread.Start();
+         
             RunNetwork();
+            _Current_Desktop.EndInteraction();
         }
         public void OnStop()
         {
             Running = Status.ShuttingDown;
-          // Stop(_Network_Thread);
+            // Stop(_Network_Thread);
             if(_LastImage != null)
                 _LastImage.Dispose();
             _LastImage = null;
+           if(_ScreenCapture!=null) _ScreenCapture.Dispose();
         }
 
-        private void Stop(Thread t)
-        {
-            try
-            {
-                if(t != null)
-                {
-                    t.Join(500);
-                }
-            } catch(Exception e)
-            {
-                Debug.WriteLine(e.Message);
-            }
-        }
 
         private void RunNetwork()
         {
@@ -113,18 +106,18 @@ namespace DesktopSharing_Server
                     {
 
 
-                        if(!locked)
-                        {
-                            locked = true;
-                            Console.WriteLine("Console locked detected");
-                            if(_Current_Desktop.SelectDesktop("winlogin"))
-                            {
-                                Console.WriteLine("Successfuly changed desktops");
-                            }else 
-                            {
-                                Console.WriteLine("Failed changed desktops");
-                            }
-                        }
+                        //if(!locked)
+                        //{
+                        //    locked = true;
+                        //    Console.WriteLine("Console locked detected");
+                        //    if(_Current_Desktop.SelectDesktop("winlogin"))
+                        //    {
+                        //        Console.WriteLine("Successfuly changed desktops");
+                        //    }else 
+                        //    {
+                        //        Console.WriteLine("Failed changed desktops");
+                        //    }
+                        //}
 
                         bool newclient = false;
                         try
@@ -133,7 +126,7 @@ namespace DesktopSharing_Server
                             {
                                 client = _Secure_Listener.AcceptTcpClient();
                                 newclient = true;
-  
+
                             }
                         } catch(Exception e)
                         {
@@ -199,7 +192,7 @@ namespace DesktopSharing_Server
                         {
                             if(InputKeyEvent != null)
                             {
-                                InputKeyEvent(BitConverter.ToInt32(ms.Blocks[1], 0), (Desktop_Sharing_Shared.Input.PInvoke.PInvoke_KeyState)BitConverter.ToInt32(ms.Blocks[2], 0));
+                                InputKeyEvent(BitConverter.ToInt32(ms.Blocks[1], 0), (Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState)BitConverter.ToInt32(ms.Blocks[2], 0));
                             }
                             break;
                         }
@@ -208,7 +201,7 @@ namespace DesktopSharing_Server
                             if(FileReceivedEvent != null)
                             {
 
-                                FileReceivedEvent("c:\\users\\" + _UserName + "\\desktop\\" + Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]), ms.Blocks[2]);
+                                FileReceivedEvent(_Users_DesktopPath + Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]), ms.Blocks[2]);
                             }
                             break;
                         }
@@ -216,7 +209,7 @@ namespace DesktopSharing_Server
                         {
                             if(FolderReceivedEvent != null)
                             {
-                                FolderReceivedEvent("c:\\users\\" + _UserName + "\\desktop\\" + Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]));
+                                FolderReceivedEvent(_Users_DesktopPath + Desktop_Sharing_Shared.Utilities.Format.GetString(ms.Blocks[1]));
                             }
                             break;
                         }
@@ -233,8 +226,9 @@ namespace DesktopSharing_Server
 
             try
             {
-
+                var dt = DateTime.Now;
                 var img = _ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
+                Debug.WriteLine("Time taken to capture: " + (DateTime.Now - dt).TotalMilliseconds);
                 if(_LastImage == null || sendsyncscreen)
                 {
 
@@ -248,14 +242,12 @@ namespace DesktopSharing_Server
                     client.Encrypt_And_Send(ms);
                 } else
                 {
-
                     var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION);
                     var rect = Desktop_Sharing_Shared.Bitmap_Helper.Get_Diff(_LastImage, img);
                     if(rect.Width > 0 && rect.Height > 0)
                     {
                         using(var updateregion = img.Clone(rect, img.PixelFormat))
                         {
-
                             ms.Add_Block(BitConverter.GetBytes(rect.Top));
                             ms.Add_Block(BitConverter.GetBytes(rect.Left));
                             using(var memorys = new MemoryStream())
@@ -268,6 +260,7 @@ namespace DesktopSharing_Server
                         }
                     }
                     _LastImage.Dispose();
+  
                 }
                 _LastImage = img;
 
@@ -278,6 +271,6 @@ namespace DesktopSharing_Server
             }
 
         }
-  
+
     }
 }

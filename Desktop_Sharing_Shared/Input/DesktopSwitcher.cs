@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -62,8 +63,7 @@ namespace Desktop_Sharing_Shared.Input
         }
         [DllImport("User32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr GetProcessWindowStation();
-        [DllImport("User32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern IntPtr GetDesktopWindow();
+
         [DllImport("User32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr OpenWindowStation(string lpszWinSta, bool fInherit, ACCESS_MASK dwDesiredAccess);
         [DllImport("user32.dll", SetLastError = true)]
@@ -78,20 +78,19 @@ namespace Desktop_Sharing_Shared.Input
         private static extern bool CloseWindowStation(IntPtr hWinsta);
 
         private IntPtr m_hCurWinsta = IntPtr.Zero;
-        private IntPtr m_hCurDesktop = IntPtr.Zero;
         private IntPtr m_hWinsta = IntPtr.Zero;
         private IntPtr m_hDesk = IntPtr.Zero;
 
         public DesktopSwitcher()
         {
             m_hCurWinsta = IntPtr.Zero;
-            m_hCurDesktop = IntPtr.Zero;
             m_hWinsta = IntPtr.Zero;
             m_hDesk = IntPtr.Zero;
+    
         }
         public bool BeginInteraction()
         {
-            using(var f = System.IO.File.CreateText(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + "\\log.txt"))
+            using(var f = System.IO.File.CreateText(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + "\\log3.txt"))
             {
                 try
                 {
@@ -99,21 +98,12 @@ namespace Desktop_Sharing_Shared.Input
 
                     f.WriteLine("BeginInteraction");
 
-                    EndInteraction(f);
+                    EndInteraction();
 
                     m_hCurWinsta = GetProcessWindowStation();
                     if(m_hCurWinsta == IntPtr.Zero)
                     {
                         f.WriteLine("GetProcessWindowStation");
-                        f.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message);
-                        return false;
-                    }
-
-
-                    m_hCurDesktop = GetDesktopWindow();
-                    if(m_hCurDesktop == IntPtr.Zero)
-                    {
-                        f.WriteLine("GetDesktopWindow");
                         f.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message);
                         return false;
                     }
@@ -166,7 +156,7 @@ namespace Desktop_Sharing_Shared.Input
                         f.WriteLine(new Win32Exception(Marshal.GetLastWin32Error()).Message);
                         return false;
                     }
-                   
+
                 } catch(Exception e)
                 {
                     f.WriteLine(e.Message);
@@ -177,7 +167,7 @@ namespace Desktop_Sharing_Shared.Input
         }
         [DllImport("user32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool SwitchDesktop(IntPtr hDesktop);       
+        private static extern bool SwitchDesktop(IntPtr hDesktop);
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, ACCESS_MASK dwDesiredAccess);
         public bool IsWorkstationLocked()
@@ -207,8 +197,10 @@ namespace Desktop_Sharing_Shared.Input
 
             return false;
         }
+
         public bool SelectDesktop(string name)
         {
+
             IntPtr desktop = IntPtr.Zero;
             if(!string.IsNullOrEmpty(name))
             {
@@ -242,22 +234,20 @@ namespace Desktop_Sharing_Shared.Input
                 m_hDesk = desktop;
             }
             return true;
+
         }
-        public void EndInteraction(StreamWriter f)
+        public void EndInteraction()
         {
-            f.WriteLine("EndInteraction");
+
             if(m_hCurWinsta != IntPtr.Zero)
                 SetProcessWindowStation(m_hCurWinsta);
-            f.WriteLine("SetProcessWindowStation");
-            if(m_hCurDesktop != IntPtr.Zero)
-                SetThreadDesktop(m_hCurDesktop);
-            f.WriteLine("SetThreadDesktop");
+
             if(m_hWinsta != IntPtr.Zero)
                 CloseWindowStation(m_hWinsta);
-            f.WriteLine("CloseWindowStation");
+
             if(m_hDesk != IntPtr.Zero)
                 CloseDesktop(m_hDesk);
-            f.WriteLine("CloseDesktop");
+
         }
     }
 }
