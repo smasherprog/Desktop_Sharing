@@ -36,6 +36,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Management" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
@@ -45,12 +46,14 @@
   <ItemGroup>
     <Compile Include="Bitmap_Helper.cs" />
     <Compile Include="Compression\Zip.cs" />
+    <Compile Include="Desktop\StationHandle.cs" />
+    <Compile Include="Desktop\DesktopHandle.cs" />
     <Compile Include="Keyboard\PInvoke.cs" />
     <Compile Include="Mouse\BitmapHandle.cs" />
     <Compile Include="Mouse\DeviceHandle.cs" />
     <Compile Include="Mouse\IconHandle.cs" />
-    <Compile Include="Input\DesktopSwitcher.cs" />
-    <Compile Include="Input\PInvoke.cs" />
+    <Compile Include="Desktop\DesktopInfo.cs" />
+    <Compile Include="Desktop\PInvoke.cs" />
     <Compile Include="Message_Types.cs" />
     <Compile Include="Mouse\IconHandleInfo.cs" />
     <Compile Include="Mouse\PInvoke.cs" />

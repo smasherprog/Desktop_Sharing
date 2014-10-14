@@ -8,12 +8,10 @@ using System.Text;
 namespace Desktop_Sharing_Shared.Mouse
 {
 
-    public class DeviceHandle : SafeHandle
+    public class DeviceHandle : IDisposable
     {
-
         public IntPtr Handle { get; private set; }
         public DeviceHandle(IntPtr handle)
-            : base(IntPtr.Zero, true)
         {
             Handle = handle;
         }
@@ -31,13 +29,22 @@ namespace Desktop_Sharing_Shared.Mouse
 
             return dc;
         }
-        public override bool IsInvalid
+        public bool IsInvalid
         {
             get { return Handle == IntPtr.Zero; }
         }
-        protected override bool ReleaseHandle()
+        public void Dispose()
         {
-            return PInvoke.DeleteDC(Handle);
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if(disposing)
+            {
+                PInvoke.DeleteDC(Handle);
+            }
         }
     }
 }

@@ -8,6 +8,9 @@ namespace Desktop_Sharing_Shared.Keyboard
 {
     public class PInvoke
     {
+        public const int WM_KEYDOWN = 0x100;
+        public const int WM_KEYUP = 0x101;
+
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         private static extern int MapVirtualKey(int uCode, int uMapType);
 

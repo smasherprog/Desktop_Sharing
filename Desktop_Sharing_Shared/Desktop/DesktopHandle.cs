@@ -1,16 +1,17 @@
-﻿using System;
+﻿using Desktop_Sharing_Shared.Mouse;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Desktop_Sharing_Shared.Mouse
+namespace Desktop_Sharing_Shared.Desktop
 {
 
-    public class BitmapHandle : IDisposable
+    public class DesktopHandle : IDisposable
     {
         public IntPtr Handle { get; private set; }
-        public BitmapHandle(IntPtr handle)
+        public DesktopHandle(IntPtr handle)
         {
             Handle = handle;
         }
@@ -18,6 +19,7 @@ namespace Desktop_Sharing_Shared.Mouse
         {
             get { return Handle == IntPtr.Zero; }
         }
+
         public void Dispose()
         {
             Dispose(true);
@@ -28,9 +30,9 @@ namespace Desktop_Sharing_Shared.Mouse
         {
             if(disposing)
             {
-                PInvoke.DeleteObject(Handle);
+                PInvoke.CloseDesktop(Handle);
             }
         }
-
+    
     }
 }

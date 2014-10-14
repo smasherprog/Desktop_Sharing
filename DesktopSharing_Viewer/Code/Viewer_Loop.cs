@@ -47,7 +47,7 @@ namespace DesktopSharing_Viewer.Code
                 _OutGoingFiles.AddRange(files);
             }
         }
-        public void OnMouseEvent(Desktop_Sharing_Shared.Input.PInvoke.WinFormMouseEventFlags msg, int x, int y, int wheel_delta)
+        public void OnMouseEvent(Desktop_Sharing_Shared.Mouse.PInvoke.WinFormMouseEventFlags msg, int x, int y, int wheel_delta)
         {
             lock(_OutGoingMessagesLock)
             {

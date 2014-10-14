@@ -8,11 +8,10 @@ using System.Text;
 namespace Desktop_Sharing_Shared
 {
 
-    public class IconHandle : SafeHandle
+    public class IconHandle : IDisposable
     {
         public IntPtr Handle { get; private set; }
         public IconHandle(IntPtr handle)
-            : base(IntPtr.Zero, true)
         {
             Handle = handle;
         }
@@ -25,14 +24,23 @@ namespace Desktop_Sharing_Shared
 
             return new IconHandle(hIcon);
         }
-        public override bool IsInvalid
+        public bool IsInvalid
         {
             get { return Handle == IntPtr.Zero; }
         }
-
-        protected override bool ReleaseHandle()
+        public void Dispose()
         {
-            return PInvoke.DestroyIcon(Handle);
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if(disposing)
+            {
+                PInvoke.DestroyIcon(Handle);
+            }
+        }
+
     }
 }

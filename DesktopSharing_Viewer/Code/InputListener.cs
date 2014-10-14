@@ -9,7 +9,7 @@ namespace DesktopSharing_Viewer.Code
 {
     public class InputListener : System.Windows.Forms.IMessageFilter
     {
-        public event Desktop_Sharing_Shared.Input.PInvoke.MouseEventHandler InputMouseEvent;
+        public event Desktop_Sharing_Shared.Mouse.PInvoke.MouseEventHandler InputMouseEvent;
         public event Desktop_Sharing_Shared.Keyboard.PInvoke.KeyEventHandler InputKeyEvent;
         private DateTime KeyboardSecondCounter = DateTime.Now;
         private DateTime MouseSecondCounter = DateTime.Now;
@@ -30,14 +30,14 @@ namespace DesktopSharing_Viewer.Code
         {
             if(Handle == m.HWnd)
             {
-                if(m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_KEYDOWN || m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_KEYUP)
+                if(m.Msg == Desktop_Sharing_Shared.Keyboard.PInvoke.WM_KEYDOWN || m.Msg == Desktop_Sharing_Shared.Keyboard.PInvoke.WM_KEYUP)
                 {
                     if(InputKeyEvent != null)
                     {
 
                         var temp = unchecked(IntPtr.Size == 8 ? (int)m.WParam.ToInt64() : (int)m.WParam.ToInt32());
 
-                        if(m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_KEYDOWN)
+                        if(m.Msg == Desktop_Sharing_Shared.Keyboard.PInvoke.WM_KEYDOWN)
                         {
                             //Debug.WriteLine("KeyDown");
                             if(Keys_Down.Contains(temp))
@@ -55,14 +55,14 @@ namespace DesktopSharing_Viewer.Code
                             //Debug.WriteLine("KeyUP");
                             Keys_Down.Remove(temp);//else its an up, so remove it
                         }
-                        InputKeyEvent(temp, m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_KEYDOWN ? Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState.DOWN : Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState.UP);
+                        InputKeyEvent(temp, m.Msg == Desktop_Sharing_Shared.Keyboard.PInvoke.WM_KEYDOWN ? Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState.DOWN : Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState.UP);
                         return true;
                     }
 
                 }
-                if(InputMouseEvent != null && ((int[])Enum.GetValues(typeof(Desktop_Sharing_Shared.Input.PInvoke.WinFormMouseEventFlags))).Contains(m.Msg))
+                if(InputMouseEvent != null && ((int[])Enum.GetValues(typeof(Desktop_Sharing_Shared.Mouse.PInvoke.WinFormMouseEventFlags))).Contains(m.Msg))
                 {
-                    if(m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_MOUSEMOVE)
+                    if(m.Msg == Desktop_Sharing_Shared.Mouse.PInvoke.WM_MOUSEMOVE)
                     {
                         if((DateTime.Now - MouseSecondCounter).TotalMilliseconds < InputPerSec)
                             return false;
@@ -71,14 +71,14 @@ namespace DesktopSharing_Viewer.Code
                     }
                     var p = GetPoint(m.LParam);
                     var wheel = 0;
-                    if(m.Msg == Desktop_Sharing_Shared.Input.PInvoke.WM_MOUSEWHEEL)
+                    if(m.Msg == Desktop_Sharing_Shared.Mouse.PInvoke.WM_MOUSEWHEEL)
                     {
                         uint xy = unchecked(IntPtr.Size == 8 ? (uint)m.WParam.ToInt64() : (uint)m.WParam.ToInt32());
                         wheel = unchecked((short)(xy >> 16));
                     }
                     if(_LastMsg != m.Msg || p.X != _LastX || p.Y != _LastY || _Lastwheel != wheel)
                     {
-                        InputMouseEvent((Desktop_Sharing_Shared.Input.PInvoke.WinFormMouseEventFlags)m.Msg, p.X, p.Y, wheel);
+                        InputMouseEvent((Desktop_Sharing_Shared.Mouse.PInvoke.WinFormMouseEventFlags)m.Msg, p.X, p.Y, wheel);
                         _LastMsg = m.Msg;
                         p.X = _LastX;
                         p.Y = _LastY;
