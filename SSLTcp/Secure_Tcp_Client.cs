@@ -14,21 +14,22 @@ namespace SecureTcp
 {
     public static class Secure_Tcp_Client
     {
-        public static Secure_Stream Connect(string key_location, string ip, int port)
+        public static Secure_Stream Connect(string key_location, string ipaddr, int port)
         {
-            var secureclient = new TcpClient(ip, port);
-            secureclient.ReceiveTimeout = 5000;
-            var sessionkey = ExchangeKeys(key_location, secureclient.GetStream());
+            var client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            client.ReceiveTimeout = 5000;
+            client.Connect(new IPEndPoint(IPAddress.Parse(ipaddr), port));
+            var sessionkey = ExchangeKeys(key_location, client);
             if(sessionkey == null)
             {
-                secureclient.Close();
-                secureclient = null;
+                client.Close();
+                client = null;
                 throw new ArgumentException("Key Exchange Failed");
             }
-            return new Secure_Stream(secureclient, sessionkey);
+            return new Secure_Stream(client, sessionkey);
         }
 
-        private static byte[] ExchangeKeys(string key_location, NetworkStream stream)
+        private static byte[] ExchangeKeys(string key_location, Socket socket)
         {
             try
             {
@@ -48,17 +49,17 @@ namespace SecureTcp
                     var data = rsa.Encrypt(sessionkey, true);
                     //send it with the length
                     byte[] intBytes = BitConverter.GetBytes(data.Length);
-                    stream.Write(intBytes, 0, intBytes.Length);
-                    stream.Write(data, 0, data.Length);
-
+                    socket.Send(intBytes);
+                    socket.Send(data);
+  
                     //read the sessionkeyhash response from the server to ensure it received it correctly
                     var b = BitConverter.GetBytes(0);
-                    stream.Read(b, 0, b.Length);
+                    socket.Receive(b, b.Length, SocketFlags.None);
                     var len = BitConverter.ToInt32(b, 0);
                     if(len > 4000)
                         throw new ArgumentException("Buffer Overlflow in Encryption key exchange!");
                     var serversessionkeyhash = new byte[len];
-                    stream.Read(serversessionkeyhash, 0, len);
+                    socket.Receive(serversessionkeyhash, serversessionkeyhash.Length, SocketFlags.None);
 
                     //compare the sessionhash returned by the server to our hash
                     if(serversessionkeyhash.SequenceEqual(sessionkeyhash))
@@ -78,6 +79,6 @@ namespace SecureTcp
             }
 
         }
-
+ 
     }
 }

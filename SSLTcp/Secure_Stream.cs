@@ -8,13 +8,21 @@ using System.Text;
 
 namespace SecureTcp
 {
+    public class ReceiveMessageObject
+    {
+        public Secure_Stream Client = null;
+        public const int HeaderSize=20;
+        public const int IVSize=20;
+        public byte[] HeaderBuffer = new byte[HeaderSize];
+        public byte[] MessageBuffer = new byte[0];
+        public int BytesRead = 0;
+    }
 
     public class Secure_Stream : IDisposable
     {
-        public TcpClient Client;
+        public Socket Client;
         byte[] _MySessionKey;
-        private int _Buffer_Size = 1024 * 1024 * 8;//dont want to reallocate large chunks of memory if I dont have to
-        byte[] _Buffer;
+
         public long Received_Total;
         public long Sent_Total;
 
@@ -27,11 +35,10 @@ namespace SecureTcp
         private const int _Window_Size = 5000;//5 seconds
         private DateTime _WindowCounter = DateTime.Now;
 
-        public Secure_Stream(TcpClient c, byte[] sessionkey)
+        public Secure_Stream(Socket c, byte[] sessionkey)
         {
             Client = c;
             Client.NoDelay = true;
-            _Buffer = new byte[_Buffer_Size];// 8 megabytes buffer
             _MySessionKey = sessionkey;
             Sent_BPS = Received_BPS=Sent_Total = Received_Total = 0;
             _Bytes_Received_in_Window = new List<long>();
@@ -45,21 +52,11 @@ namespace SecureTcp
         }
         public void Encrypt_And_Send(Tcp_Message m)
         {
-
-            Write(m, Client.GetStream());
+            Write(m);
             var l = m.length;
             _Bytes_Sent_in_Window.Add(l);
             Sent_Total += l;
             UpdateCounters();
-        }
-        public Tcp_Message Read_And_Unencrypt()
-        {
-            var r= Read(Client.GetStream());
-            var l = r.length;
-            Received_Total += l;
-            _Bytes_Received_in_Window.Add(l);
-            UpdateCounters();
-            return r;
         }
 
         private void UpdateCounters()
@@ -87,7 +84,7 @@ namespace SecureTcp
 
             return string.Format("{0:n1} {1}", adjustedSize, SizeSuffixes[mag]);
         }
-        protected void Write(Tcp_Message m, NetworkStream stream)
+        protected void Write(Tcp_Message m)
         {
             try
             {
@@ -98,16 +95,15 @@ namespace SecureTcp
                     aes.GenerateIV();
                     aes.Mode = CipherMode.CBC;
                     aes.Padding = PaddingMode.PKCS7;
-
-                    var iv = aes.IV;
-                    stream.Write(iv, 0, iv.Length);
+          
+                    Client.Send(aes.IV);
                     using(ICryptoTransform encrypt = aes.CreateEncryptor())
                     {
                         var sendbuffer= Tcp_Message.ToBuffer(m);
                         var encryptedbytes = encrypt.TransformFinalBlock(sendbuffer, 0, sendbuffer.Length);
-                  
-                        stream.Write(BitConverter.GetBytes(encryptedbytes.Length), 0, 4);
-                        stream.Write(encryptedbytes, 0, encryptedbytes.Length);
+                
+                        Client.Send(BitConverter.GetBytes(encryptedbytes.Length));
+                        Client.Send(encryptedbytes);
                     }
                 }
             } catch(Exception e)
@@ -115,19 +111,103 @@ namespace SecureTcp
                 Debug.WriteLine(e.Message);
             }
         }
-        protected Tcp_Message Read(NetworkStream stream)
+        public delegate void MessageReceivedHandler(Secure_Stream client, Tcp_Message ms);
+        public event MessageReceivedHandler MessageReceivedEvent;
+        public void BeginRead()
+        {
+            _BeginRead(this);
+        }
+        private static void _BeginRead(Secure_Stream c)
+        {
+            var state = new ReceiveMessageObject();
+            state.Client = c;
+            c.Client.BeginReceive(state.HeaderBuffer, 0, ReceiveMessageObject.HeaderSize, 0,
+                new AsyncCallback(ReadHeaderCallback), state);
+        }
+        private static void ReadHeaderCallback(IAsyncResult ar)
+        {
+            // Retrieve the state object and the handler socket
+            // from the asynchronous state object.
+            var state = (ReceiveMessageObject)ar.AsyncState;
+            var handler = state.Client;
+
+            // Read data from the client socket. 
+            int bytesRead = handler.Client.EndReceive(ar);
+
+            if(bytesRead > 0)
+            {
+                state.BytesRead += bytesRead;
+                if(state.BytesRead == ReceiveMessageObject.HeaderSize)
+                {
+                    state.MessageBuffer = new byte[BitConverter.ToInt32(state.HeaderBuffer, 16)];
+                    state.BytesRead = 0;
+                    handler.Client.BeginReceive(state.MessageBuffer, 0, state.MessageBuffer.Length, 0, new AsyncCallback(ReadMessageCallback), state);
+                } else
+                {
+                    // Not all data received. Get more.
+                    handler.Client.BeginReceive(state.HeaderBuffer, state.BytesRead, ReceiveMessageObject.HeaderSize - state.BytesRead, 0, new AsyncCallback(ReadHeaderCallback), state);
+                }
+            }
+        }
+        private static void ReadMessageCallback(IAsyncResult ar)
+        {
+            // Retrieve the state object and the handler socket
+            // from the asynchronous state object.
+            var state = (ReceiveMessageObject)ar.AsyncState;
+            var handler = state.Client;
+
+            // Read data from the client socket. 
+            var bytesRead = handler.Client.EndReceive(ar);
+            if(bytesRead > 0)
+            {
+                state.BytesRead += bytesRead;
+                if(state.BytesRead == state.MessageBuffer.Length)
+                {//done receiving message
+                    using(AesCryptoServiceProvider aes = new AesCryptoServiceProvider())
+                    {
+                        aes.KeySize = handler._MySessionKey.Length * 8;
+                        aes.Key = handler._MySessionKey;
+                        var iv = new byte[16];
+                        Array.Copy(state.HeaderBuffer, iv, 16);
+                        aes.IV = iv;
+                        aes.Mode = CipherMode.CBC;
+                        aes.Padding = PaddingMode.PKCS7;
+
+                      
+                        using(ICryptoTransform decrypt = aes.CreateDecryptor())
+                        {
+                            var arrybuf = decrypt.TransformFinalBlock(state.MessageBuffer, 0, state.MessageBuffer.Length);
+                            //Received_Total += state.MessageBuffer.Length;
+                            //_Bytes_Received_in_Window.Add(state.MessageBuffer.Length);
+                            //UpdateCounters();
+
+                            if(handler.MessageReceivedEvent != null)
+                                handler.MessageReceivedEvent(state.Client, Tcp_Message.FromBuffer(arrybuf));
+                            _BeginRead(state.Client);//start over again
+                        }
+                    }
+                } else
+                {
+                    // Not all data received. Get more.
+                    handler.Client.BeginReceive(state.MessageBuffer, state.BytesRead, state.MessageBuffer.Length - state.BytesRead, 0, new AsyncCallback(ReadMessageCallback), state);
+                }
+            }
+        }
+        public Tcp_Message Read_And_Unencrypt()
         {
             try
             {
-                if(stream.DataAvailable)
+               
+                if(Client.Available>0)
                 {
                     var iv = new byte[16];
-                    stream.Read(iv, 0, 16);
-
+          
+                    Client.Receive(iv, 16, SocketFlags.None);
                     var b = BitConverter.GetBytes(0);
-                    stream.Read(b, 0, b.Length);
+            
+                    Client.Receive(b, b.Length, SocketFlags.None);
                     var len = BitConverter.ToInt32(b, 0);
-             
+
                     using(AesCryptoServiceProvider aes = new AesCryptoServiceProvider())
                     {
                         aes.KeySize = _MySessionKey.Length * 8;
@@ -135,12 +215,12 @@ namespace SecureTcp
                         aes.IV = iv;
                         aes.Mode = CipherMode.CBC;
                         aes.Padding = PaddingMode.PKCS7;
-
-                        ReadExact(stream, _Buffer, 0, len);
-                       
+                        var buffer = new byte[len];
+                        Client.Receive(buffer, buffer.Length, SocketFlags.None);
+                  
                         using(ICryptoTransform decrypt = aes.CreateDecryptor())
                         {
-                            var arrybuf = decrypt.TransformFinalBlock(_Buffer, 0, len);
+                            var arrybuf = decrypt.TransformFinalBlock(buffer, 0, buffer.Length);
                             return Tcp_Message.FromBuffer(arrybuf);
 
                         }

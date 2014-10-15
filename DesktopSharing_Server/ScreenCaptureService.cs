@@ -16,6 +16,11 @@ using System.Windows.Forms;
 
 namespace DesktopSharing_Server
 {
+    public class ScreenCaptureClient
+    {
+        public Secure_Stream DataStream = null;
+        public bool NewConnect = false;
+    }
     public class ScreenCaptureService
     {
         enum Status { Starting, Running, Stopped, ShuttingDown }
@@ -28,8 +33,12 @@ namespace DesktopSharing_Server
         Desktop_Sharing_Shared.Desktop.DesktopInfo _DesktopInfo;
         Desktop_Sharing_Shared.Screen.ScreenCapture _ScreenCapture;
 
-        int MSPerFrame = 200;
-        DateTime _LastFrame = DateTime.Now;
+        object _ClientLock = new object();
+        List<Secure_Stream> _PendingClients = new List<Secure_Stream>();
+        List<ScreenCaptureClient> _Clients = new List<ScreenCaptureClient>();
+
+        object _ReceivedMsgsLock = new object();
+        List<Tcp_Message> _ReceivedMessages = new List<Tcp_Message>();
 
         public ScreenCaptureService()
         {
@@ -52,12 +61,23 @@ namespace DesktopSharing_Server
             _DesktopInfo = new Desktop_Sharing_Shared.Desktop.DesktopInfo();
             _ScreenCapture = new Desktop_Sharing_Shared.Screen.ScreenCapture(70);
             Running = Status.Starting;
+            _Clients = new List<ScreenCaptureClient>();
             RunNetwork();
         }
 
         public void OnStop()
         {
             Running = Status.ShuttingDown;
+            lock(_ClientLock)
+            {
+                foreach(var item in _PendingClients)
+                    item.Dispose();
+            }
+            foreach(var item in _Clients)
+                item.DataStream.Dispose();
+            _Clients.Clear();
+            _PendingClients.Clear();
+
             // Stop(_Network_Thread);
             if(_LastImage != null)
                 _LastImage.Dispose();
@@ -78,7 +98,9 @@ namespace DesktopSharing_Server
                 using(var _Secure_Listener = new Secure_Tcp_Listener(WorkingDirectory + "\\privatekey.xml", 6000))
                 {
 
-                    Secure_Stream client = null;
+                    _Secure_Listener.NewClient += _Secure_Listener_NewClient;
+                    _Secure_Listener.StartListening();
+
                     while(Running == Status.Running)
                     {
                         if(_RunningAsService)
@@ -89,40 +111,43 @@ namespace DesktopSharing_Server
                                 _DesktopInfo.SwitchDesktop(d);
                             }
                         }
-                        bool newclient = false;
-                        try
+                        if(_PendingClients.Any())
                         {
-                            if(client == null)
+                            lock(_ClientLock)
                             {
-                                client = _Secure_Listener.AcceptTcpClient();
-                                newclient = true;
-
+                                foreach(var item in _PendingClients)
+                                {
+                                    var p = new ScreenCaptureClient { DataStream = item, NewConnect = true };
+                                    p.DataStream.MessageReceivedEvent += DataStream_MessageReceivedEvent;
+                                    _Clients.Add(p);
+                                }
+                                _PendingClients.Clear();
                             }
-                        } catch(Exception e)
-                        {
-                            Debug.WriteLine(e.Message);
                         }
-
-                        if(client == null)
-                            continue;
-                        try
+                        var disconnectedclients = _Clients.Where(a => !a.DataStream.Client.Connected);
+                        foreach(var item in disconnectedclients)
                         {
-                            if(!client.Client.Connected)
+                            _Clients.Remove(item);
+                            item.DataStream.Dispose();
+                        }
+                        foreach(var item in _Clients)
+                        {
+                            Send(item);
+                        }
+                        if(_ReceivedMessages.Any())
+                        {
+                            List<Tcp_Message> tmp = new List<Tcp_Message>();
+                            lock(_ReceivedMsgsLock)
                             {
-                                client.Dispose();
-                                client = null;
-                                continue;
+                                var tmp1 = _ReceivedMessages;
+                                _ReceivedMessages = tmp;
+                                tmp = tmp1;
                             }
-                        } catch(Exception e)
-                        {
-                            Debug.WriteLine(e.Message);
+                            foreach(var item in tmp)
+                            {
+                                MessageReceived(item);                            
+                            }
                         }
-                        if(client == null)
-                            continue;
-                   
-                            SendPass(client, newclient);
-                            ReceivePass(client);
-                      
                     }
                 }
 
@@ -136,13 +161,30 @@ namespace DesktopSharing_Server
             Debug.WriteLine("Finished Network Thread");
         }
 
-        private void ReceivePass(Secure_Stream client)
+        void DataStream_MessageReceivedEvent(Secure_Stream client, Tcp_Message ms)
+        {
+            lock(_ReceivedMsgsLock)
+            {
+                _ReceivedMessages.Add(ms);
+            }
+           
+        }
+
+
+        private void _Secure_Listener_NewClient(Secure_Stream client)
+        {
+            lock(_ClientLock){
+                _PendingClients.Add(client);
+            }
+        }
+
+
+
+        private void MessageReceived(Tcp_Message ms)
         {
             try
             {
-                if(client.Client.Available <= 0)
-                    return;
-                var ms = client.Read_And_Unencrypt();
+          
                 if(ms.Type == (int)Desktop_Sharing_Shared.Message_Types.MOUSE_EVENT)
                 {
 
@@ -169,17 +211,14 @@ namespace DesktopSharing_Server
                 Debug.WriteLine(e.Message);
             }
         }
-        private void SendPass(Secure_Stream client, bool sendsyncscreen = false)
+        private void Send(ScreenCaptureClient client)
         {
-            if((DateTime.Now - _LastFrame).TotalMilliseconds < MSPerFrame)
-                return;
-       
             try
             {
                 var dt = DateTime.Now;
                 var img = _ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
                 Debug.WriteLine("Time taken to capture: " + (DateTime.Now - dt).TotalMilliseconds);
-                if(_LastImage == null || sendsyncscreen)
+                if(_LastImage == null || client.NewConnect)
                 {
 
                     var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE);
@@ -189,7 +228,7 @@ namespace DesktopSharing_Server
                         ms.Add_Block(memorys.ToArray());
                     }
                     Debug.WriteLine("Sending RESOLUTION_CHANGE image to client");
-                    client.Encrypt_And_Send(ms);
+                    client.DataStream.Encrypt_And_Send(ms);
                 } else
                 {
                     var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION);
@@ -206,7 +245,7 @@ namespace DesktopSharing_Server
                                 ms.Add_Block(memorys.ToArray());
                             }
                             Debug.WriteLine("Sending UPDATE_REGION image to client " + rect.Top + " " + rect.Left);
-                            client.Encrypt_And_Send(ms);
+                            client.DataStream.Encrypt_And_Send(ms);
                         }
                     }
                     _LastImage.Dispose();
