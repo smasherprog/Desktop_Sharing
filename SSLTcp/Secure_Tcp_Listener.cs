@@ -92,6 +92,7 @@ namespace SecureTcp
         {
             // Signal the main thread to continue.
             allDone.Set();
+            Debug.WriteLine("New connection received");
 
             // Get the socket that handles the client request.
             var listener = (Socket)ar.AsyncState;
@@ -105,6 +106,7 @@ namespace SecureTcp
         }
         public void ReadHeaderCallback(IAsyncResult ar)
         {
+            Debug.WriteLine("ReadHeaderCallback");
             // Retrieve the state object and the handler socket
             // from the asynchronous state object.
             var state = (HeaderObject)ar.AsyncState;
@@ -134,6 +136,7 @@ namespace SecureTcp
         }
         public void ReadKeysCallback(IAsyncResult ar)
         {
+            Debug.WriteLine("ReadKeysCallback");
             // Retrieve the state object and the handler socket
             // from the asynchronous state object.
             var state = (SessionKeyObject)ar.AsyncState;
@@ -157,7 +160,7 @@ namespace SecureTcp
         }
         private void SendSessionKey(SessionKeyObject state)
         {
-
+            Debug.WriteLine("SendSessionKey");
             try
             {
                 using(RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
@@ -170,6 +173,7 @@ namespace SecureTcp
                     //send it back to the client
                     state.Client.Send(BitConverter.GetBytes(sessionkeyhash.Length));
                     state.Client.Send(sessionkeyhash);
+                    Debug.WriteLine("Key Exchange completed!");
                     if(NewClient != null)//raise event
                         NewClient(new Secure_Stream(state.Client, state.buffer));
                 }

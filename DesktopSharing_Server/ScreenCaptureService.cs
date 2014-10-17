@@ -229,6 +229,7 @@ namespace DesktopSharing_Server
                     }
                     Debug.WriteLine("Sending RESOLUTION_CHANGE image to client");
                     client.DataStream.Encrypt_And_Send(ms);
+                    client.NewConnect = false;
                 } else
                 {
                     var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION);

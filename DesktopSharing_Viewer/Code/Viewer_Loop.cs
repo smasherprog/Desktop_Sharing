@@ -78,9 +78,10 @@ namespace DesktopSharing_Viewer.Code
             {
                 using(var server = SecureTcp.Secure_Tcp_Client.Connect(Directory.GetCurrentDirectory() + "\\publickey.xml", IPtoConnect, 6000))
                 {
+                    server.MessageReceivedEvent += server_MessageReceivedEvent;
+                    server.BeginRead();
                     while(Running == Status.Running)
                     {
-                        ReceivePass(server);
                         SendPass(server);
                     }
 
@@ -91,11 +92,9 @@ namespace DesktopSharing_Viewer.Code
             }
             Running = Status.Stopped;
         }
-        private void ReceivePass(SecureTcp.Secure_Stream client)
+
+        void server_MessageReceivedEvent(SecureTcp.Secure_Stream client, SecureTcp.Tcp_Message ms)
         {
-            if(client.Client.Available <= 0)
-                return;
-            var ms = client.Read_And_Unencrypt();
             switch(ms.Type)
             {
                 case ((int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION):
@@ -108,13 +107,11 @@ namespace DesktopSharing_Viewer.Code
                         New_Image(ms.Blocks[1]);
                         break;
                     }
-          
-                    
                 default:
                     break;
             }
-
         }
+
         private void SendPass(SecureTcp.Secure_Stream client)
         {
             lock(_OutGoingMessagesLock)
