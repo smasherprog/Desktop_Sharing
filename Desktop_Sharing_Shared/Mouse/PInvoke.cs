@@ -23,8 +23,10 @@ namespace Desktop_Sharing_Shared.Mouse
         public Int32 y;
     }
     
- 
-
+    public struct MouseEventStruct{
+        public Desktop_Sharing_Shared.Mouse.PInvoke.WinFormMouseEventFlags msg;
+        public int x, y, wheel_delta;
+    }
  
     [StructLayout(LayoutKind.Sequential)]
     public struct CURSORINFO
@@ -94,38 +96,37 @@ namespace Desktop_Sharing_Shared.Mouse
         }
 
 
-        public delegate void MouseEventHandler(WinFormMouseEventFlags msg, int x, int y, int wheel_delta);
+        public delegate void MouseEventHandler(MouseEventStruct m);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
         private static extern void mouse_event(PInvoke_MouseEventFlags dwFlags, uint dx, uint dy, uint dwData, uint dwExtraInfo);
 
-        public static void SendMouseEvent(WinFormMouseEventFlags msg, int x, int y, int wheel_delta)
+        public static void SendMouseEvent(MouseEventStruct m)
         {
-
             var command = PInvoke_MouseEventFlags.LEFTDOWN;
-            if(msg == WinFormMouseEventFlags.MOVE)
+            if(m.msg == WinFormMouseEventFlags.MOVE)
                 command = PInvoke_MouseEventFlags.MOVE | PInvoke_MouseEventFlags.ABSOLUTE;
-            else if(msg == WinFormMouseEventFlags.LEFTDOWN)
+            else if(m.msg == WinFormMouseEventFlags.LEFTDOWN)
                 command = PInvoke_MouseEventFlags.LEFTDOWN;
-            else if(msg == WinFormMouseEventFlags.LEFTUP)
+            else if(m.msg == WinFormMouseEventFlags.LEFTUP)
                 command = PInvoke_MouseEventFlags.LEFTUP;
-            else if(msg == WinFormMouseEventFlags.WHEEL)
+            else if(m.msg == WinFormMouseEventFlags.WHEEL)
                 command = PInvoke_MouseEventFlags.WHEEL;
-            else if(msg == WinFormMouseEventFlags.RIGHTUP)
+            else if(m.msg == WinFormMouseEventFlags.RIGHTUP)
                 command = PInvoke_MouseEventFlags.RIGHTUP;
-            else if(msg == WinFormMouseEventFlags.RIGHTDOWN)
+            else if(m.msg == WinFormMouseEventFlags.RIGHTDOWN)
                 command = PInvoke_MouseEventFlags.RIGHTDOWN;
-            else if(msg == WinFormMouseEventFlags.MIDDLEDOWN)
+            else if(m.msg == WinFormMouseEventFlags.MIDDLEDOWN)
                 command = PInvoke_MouseEventFlags.MIDDLEDOWN;
-            else if(msg == WinFormMouseEventFlags.MIDDLEUP)
+            else if(m.msg == WinFormMouseEventFlags.MIDDLEUP)
                 command = PInvoke_MouseEventFlags.MIDDLEUP;
-            else if(msg == WinFormMouseEventFlags.XDOWN)
+            else if(m.msg == WinFormMouseEventFlags.XDOWN)
                 command = PInvoke_MouseEventFlags.XDOWN;
-            else if(msg == WinFormMouseEventFlags.XUP)
+            else if(m.msg == WinFormMouseEventFlags.XUP)
                 command = PInvoke_MouseEventFlags.XUP;
 
 
-            mouse_event(command, (uint)x, (uint)y, (uint)wheel_delta, 0);
+            mouse_event(command, (uint)m.x, (uint)m.y, (uint)m.wheel_delta, 0);
 
             // Console.WriteLine("Received Mouse event " + command + " " + ((uint)x) + " " + ((uint)y) + " " + ((uint)wheel_delta));
         }

@@ -1,4 +1,5 @@
-﻿namespace DesktopSharing
+﻿using System.Drawing;
+namespace DesktopSharing
 {
     partial class Form1
     {
@@ -29,8 +30,8 @@
         private void InitializeComponent()
         {
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
-            this.pictureBox1 = new DesktopSharing_Viewer.Code.PictureBoxEx();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            this.pictureBox1 = new DesktopSharing_Viewer.Code.ViewPort();
+    
             this.SuspendLayout();
             // 
             // statusStrip1
@@ -46,6 +47,7 @@
             this.pictureBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+   
             this.pictureBox1.Location = new System.Drawing.Point(0, 0);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(985, 677);
@@ -62,7 +64,7 @@
             this.Controls.Add(this.pictureBox1);
             this.Name = "Form1";
             this.Text = "Desktop Viewer";
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+     
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -70,7 +72,7 @@
 
         #endregion
 
-        private DesktopSharing_Viewer.Code.PictureBoxEx pictureBox1;
+        private DesktopSharing_Viewer.Code.ViewPort pictureBox1;
         private System.Windows.Forms.StatusStrip statusStrip1;
 
     }

@@ -24,8 +24,6 @@ namespace Desktop_Sharing_Shared.Desktop
 
         public DesktopInfo()
         {
-
-
             using(var searcher = new ManagementObjectSearcher("SELECT UserName FROM Win32_ComputerSystem"))
             {
                 using(var collection = searcher.Get())

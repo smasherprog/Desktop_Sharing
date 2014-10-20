@@ -1,17 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Desktop_Sharing_Shared.Mouse
 {
+
     public class MouseCapture : IDisposable
     {
         private DeviceHandle mask;
         private int cursorInfoSize;
+        private IntPtr LastCursor = IntPtr.Zero;//dont need to dispose, just a copy of a pointer
+
+        public delegate void MousePositionChangedHandler(Point tl);
+        public event MousePositionChangedHandler MousePositionChangedEvent;
+
+        public delegate void MouseImageChangedHandler(Point tl, byte[] data);
+        public event MouseImageChangedHandler MouseImageChangedEvent;
+
         public MouseCapture()
         {
             IntPtr desk = PInvoke.GetDesktopWindow();
@@ -19,6 +30,7 @@ namespace Desktop_Sharing_Shared.Mouse
                 mask = DeviceHandle.CreateCompatibleDC(desktop);
 
             cursorInfoSize = Marshal.SizeOf(typeof(CURSORINFO));
+
         }
 
         public void Update()
@@ -30,7 +42,7 @@ namespace Desktop_Sharing_Shared.Mouse
             if(!PInvoke.GetCursorInfo(out cursorInfo))
                 return;
 
-            if(cursorInfo.flags != PInvoke.CURSOR_SHOWING)
+            if(cursorInfo.flags != PInvoke.CURSOR_SHOWING)// same cursor as previous
                 return;
 
             using(IconHandle hicon = IconHandle.GetCursorIcon(cursorInfo))
@@ -38,10 +50,19 @@ namespace Desktop_Sharing_Shared.Mouse
             {
                 if(iconInfo == null)
                     return;
-
-                Position.X = cursorInfo.ptScreenPos.x - iconInfo.Hotspot.X;
-                Position.Y = cursorInfo.ptScreenPos.y - iconInfo.Hotspot.Y;
-
+                var tmpx = _Position.X;
+                var tmpy = _Position.Y;
+                _Position.X = cursorInfo.ptScreenPos.x - iconInfo.Hotspot.X;
+                _Position.Y = cursorInfo.ptScreenPos.y - iconInfo.Hotspot.Y;
+                if(LastCursor == cursorInfo.hCursor)
+                {
+                    if(MousePositionChangedEvent != null && tmpx != _Position.X && tmpy != _Position.Y)
+                    {
+                        MousePositionChangedEvent(_Position);
+                    }
+                    return;//no more work here, the cursor is the same
+                }
+                LastCursor = cursorInfo.hCursor;//just a copy
                 Bitmap resultBitmap = null;
 
                 using(Bitmap bitmapMask = Bitmap.FromHbitmap(iconInfo.MaskBitmap.Handle))
@@ -80,38 +101,30 @@ namespace Desktop_Sharing_Shared.Mouse
                             resultBitmap = icon.ToBitmap();
                     }
                 }
-
-                _Cursor= resultBitmap;
+                _Cursor = resultBitmap;
+                if(MouseImageChangedEvent != null)
+                {
+                    using(var ms = new MemoryStream())
+                    {
+                        _Cursor.Save(ms, ImageFormat.Png);//png to preserve the transparency
+                        MouseImageChangedEvent(_Position, ms.ToArray());
+                    }
+                }
             }
         }
 
         private Bitmap _Cursor = null;
-        public Bitmap Cursor
-        {
-            get
-            {
-                return _Cursor;
-            }
-            set
-            {
-                if(_Cursor != null)
-                    _Cursor.Dispose();
-                _Cursor = value;
-            }
-        }
+        private Point _Position = new Point();
 
-        public Point Position = new Point();
-
-        
         public void Draw(Graphics graphics)
         {
-            if (graphics == null)
+            if(graphics == null)
                 throw new ArgumentNullException("graphics");
 
-            Bitmap cursor = Cursor;
+            Bitmap cursor = _Cursor;
 
-            if (cursor != null)
-                graphics.DrawImage(cursor, Position);
+            if(cursor != null)
+                graphics.DrawImage(cursor, _Position);
         }
 
         public void Dispose()
@@ -122,13 +135,28 @@ namespace Desktop_Sharing_Shared.Mouse
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
+            if(disposing)
             {
                 // free managed resources
                 mask.Dispose();
                 mask = null;
             }
         }
+        private ImageCodecInfo GetEncoder(ImageFormat format)
+        {
+
+            ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
+
+            foreach(ImageCodecInfo codec in codecs)
+            {
+                if(codec.FormatID == format.Guid)
+                {
+                    return codec;
+                }
+            }
+            return null;
+        }
+
     }
 }
 

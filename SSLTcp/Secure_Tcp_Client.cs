@@ -18,6 +18,7 @@ namespace SecureTcp
         {
             var client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             client.ReceiveTimeout = 5000;
+            client.NoDelay = true;
             client.Connect(new IPEndPoint(IPAddress.Parse(ipaddr), port));
             var sessionkey = ExchangeKeys(key_location, client);
             if(sessionkey == null)
@@ -54,12 +55,12 @@ namespace SecureTcp
   
                     //read the sessionkeyhash response from the server to ensure it received it correctly
                     var b = BitConverter.GetBytes(0);
-                    socket.Receive(b, b.Length, SocketFlags.None);
+                    Utilities.Receive_Exact(socket,b,0, b.Length);
                     var len = BitConverter.ToInt32(b, 0);
                     if(len > 4000)
                         throw new ArgumentException("Buffer Overlflow in Encryption key exchange!");
                     var serversessionkeyhash = new byte[len];
-                    socket.Receive(serversessionkeyhash, serversessionkeyhash.Length, SocketFlags.None);
+                    Utilities.Receive_Exact(socket, serversessionkeyhash, 0, serversessionkeyhash.Length);
 
                     //compare the sessionhash returned by the server to our hash
                     if(serversessionkeyhash.SequenceEqual(sessionkeyhash))

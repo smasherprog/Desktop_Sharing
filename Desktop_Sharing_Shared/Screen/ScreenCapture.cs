@@ -8,17 +8,10 @@ using System.Text;
 
 namespace Desktop_Sharing_Shared.Screen
 {
-    public class ScreenCapture: IDisposable
+    public class ScreenCapture
     {
-
-        private ImageCodecInfo _jgpEncoder;
-        private EncoderParameters _myEncoderParameters;
-
-        public ImageCodecInfo jgpEncoder { get { return _jgpEncoder; } }
-        public EncoderParameters EncoderParameters { get { return _myEncoderParameters; } }
-
-        Desktop_Sharing_Shared.Mouse.MouseCapture _MouseCapture;
- 
+        public ImageCodecInfo _jgpEncoder;
+        public EncoderParameters _myEncoderParameters;
 
         public ScreenCapture(long jpgquality=60L)
         {
@@ -27,26 +20,23 @@ namespace Desktop_Sharing_Shared.Screen
             var myEncoderParameter = new EncoderParameter(myEncoder, jpgquality);
             _myEncoderParameters = new EncoderParameters(1);
             _myEncoderParameters.Param[0] = myEncoderParameter;
-            _MouseCapture = new Mouse.MouseCapture();
             
         }
         public Bitmap GetScreen(Size sz)
         {
-            _MouseCapture.Update();
             IntPtr hDesk, hSrce, hDest, hBmp, hOldBmp;
             hDesk = hSrce = hDest = hBmp = hOldBmp = IntPtr.Zero;
   
             try
             {
                 hDesk = PInvoke.GetDesktopWindow();
-                hSrce = PInvoke.GetWindowDC(hDesk);
+                hSrce = PInvoke.GetWindowDC(IntPtr.Zero);
                 hDest = PInvoke.CreateCompatibleDC(hSrce);
                 hBmp = PInvoke.CreateCompatibleBitmap(hSrce, sz.Width, sz.Height);
                 hOldBmp = PInvoke.SelectObject(hDest, hBmp);
                 bool b = PInvoke.BitBlt(hDest, 0, 0, sz.Width, sz.Height, hSrce, 0, 0, CopyPixelOperation.SourceCopy | CopyPixelOperation.CaptureBlt);
                 Bitmap bmp = Bitmap.FromHbitmap(hBmp);
                 PInvoke.SelectObject(hDest, hOldBmp);
-                using(var g = Graphics.FromImage(bmp)) _MouseCapture.Draw(g);
                 
                 return bmp;
             } catch(Exception e)
@@ -76,9 +66,6 @@ namespace Desktop_Sharing_Shared.Screen
             }
             return null;
         }
-        public void Dispose()
-        {
-            _MouseCapture.Dispose();
-        }
+
     }
 }

@@ -40,6 +40,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Message.cs" />
+    <Compile Include="TCP_Server.cs" />
+    <Compile Include="Utilities.cs" />
     <Compile Include="Secure_Stream.cs" />
     <Compile Include="Secure_Tcp_Listener.cs" />
     <Compile Include="Secure_Tcp_Client.cs" />

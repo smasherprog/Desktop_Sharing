@@ -13,8 +13,18 @@ namespace DesktopSharing_Viewer.Code
         public enum Status { Starting, Running, Stopped, ShuttingDown }
         public System.Threading.Thread _Thread;
         public Status Running = Status.Stopped;
-        public Action<Point, byte[]> Update_Image;
-        public Action<byte[]> New_Image;
+
+        public delegate void UpdateImageHandler(Point tl, byte[] data);
+        public event UpdateImageHandler UpdateImageEvent;
+
+        public delegate void NewImageHandler(byte[] data);
+        public event NewImageHandler NewImageEvent;
+
+        public delegate void MousePositionChangedHandler(Point tl);
+        public event MousePositionChangedHandler MousePositionChangedEvent;
+
+        public delegate void MouseImageChangedHandler(Point tl, byte[] data);
+        public event MouseImageChangedHandler MouseImageChangedEvent;
 
         private List<SecureTcp.Tcp_Message> _OutGoingMessages;
         private object _OutGoingMessagesLock = new object();
@@ -47,25 +57,26 @@ namespace DesktopSharing_Viewer.Code
                 _OutGoingFiles.AddRange(files);
             }
         }
-        public void OnMouseEvent(Desktop_Sharing_Shared.Mouse.PInvoke.WinFormMouseEventFlags msg, int x, int y, int wheel_delta)
+
+        public void OnMouseEvent(Desktop_Sharing_Shared.Mouse.MouseEventStruct m)
         {
+            var t = new SecureTcp.Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.MOUSE_EVENT);
+            t.Add_Block(BitConverter.GetBytes((int)m.msg));
+            t.Add_Block(BitConverter.GetBytes(m.x));
+            t.Add_Block(BitConverter.GetBytes(m.y));
+            t.Add_Block(BitConverter.GetBytes(m.wheel_delta));
             lock(_OutGoingMessagesLock)
             {
-                var t = new SecureTcp.Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.MOUSE_EVENT);
-                t.Add_Block(BitConverter.GetBytes((int)msg));
-                t.Add_Block(BitConverter.GetBytes(x));
-                t.Add_Block(BitConverter.GetBytes(y));
-                t.Add_Block(BitConverter.GetBytes(wheel_delta));
                 _OutGoingMessages.Add(t);
             }
         }
-        public void OnKeyEvent(int bVk, Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState s)
+        public void OnKeyEvent(Desktop_Sharing_Shared.Keyboard.KeyboardEventStruct k)
         {
+            var t = new SecureTcp.Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.KEY_EVENT);
+            t.Add_Block(BitConverter.GetBytes(k.bVk));
+            t.Add_Block(BitConverter.GetBytes((int)k.s));
             lock(_OutGoingMessagesLock)
             {
-                var t = new SecureTcp.Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.KEY_EVENT);
-                t.Add_Block(BitConverter.GetBytes(bVk));
-                t.Add_Block(BitConverter.GetBytes((int)s));
                 _OutGoingMessages.Add(t);
             }
         }
@@ -99,12 +110,22 @@ namespace DesktopSharing_Viewer.Code
             {
                 case ((int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION):
                     {
-                        Update_Image(new Point(BitConverter.ToInt32(ms.Blocks[2], 0), BitConverter.ToInt32(ms.Blocks[1], 0)), ms.Blocks[3]);
+                        UpdateImageEvent(new Point(BitConverter.ToInt32(ms.Blocks[2], 0), BitConverter.ToInt32(ms.Blocks[1], 0)), ms.Blocks[3]);
                         break;
                     }
                 case ((int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE):
                     {
-                        New_Image(ms.Blocks[1]);
+                        NewImageEvent(ms.Blocks[1]);
+                        break;
+                    }
+                case ((int)Desktop_Sharing_Shared.Message_Types.MOUSE_IMAGE_EVENT):
+                    {
+                        MouseImageChangedEvent(new Point(BitConverter.ToInt32(ms.Blocks[2], 0), BitConverter.ToInt32(ms.Blocks[1], 0)), ms.Blocks[3]);
+                        break;
+                    }
+                case ((int)Desktop_Sharing_Shared.Message_Types.MOUSE_POSITION_EVENT):
+                    {
+                        MousePositionChangedEvent(new Point(BitConverter.ToInt32(ms.Blocks[2], 0), BitConverter.ToInt32(ms.Blocks[1], 0)));
                         break;
                     }
                 default:

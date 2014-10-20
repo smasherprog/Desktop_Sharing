@@ -23,8 +23,10 @@ namespace DesktopSharing
             InitializeComponent();
             FormClosing += Form1_FormClosing;
             _Viewer_Loop = new DesktopSharing_Viewer.Code.Viewer_Loop();
-            _Viewer_Loop.Update_Image = Update_Image;
-            _Viewer_Loop.New_Image = New_Image;
+            _Viewer_Loop.UpdateImageEvent += Update_Image;
+            _Viewer_Loop.NewImageEvent += New_Image;
+            _Viewer_Loop.MouseImageChangedEvent += _Viewer_Loop_MouseUpdateEvent;
+            _Viewer_Loop.MousePositionChangedEvent += _Viewer_Loop_MousePositionChangedEvent;
             var t = new InputListener(pictureBox1.Handle);
             t.InputMouseEvent += _Viewer_Loop.OnMouseEvent;
             t.InputKeyEvent += _Viewer_Loop.OnKeyEvent;
@@ -32,9 +34,111 @@ namespace DesktopSharing
             Application.AddMessageFilter(t);
             this.DragDrop += new DragEventHandler(this.Form1_DragDrop);
             this.DragEnter += new DragEventHandler(this.Form1_DragEnter);
+
             _Viewer_Loop.IPtoConnect = ipaddress;
             _Viewer_Loop.Start();
         }
+
+        void _Viewer_Loop_MousePositionChangedEvent(Point tl)
+        {
+
+            pictureBox1.Mouse_Position = tl;
+
+            if(pictureBox1.Image != null)
+            {
+                pictureBox1.Invoke((MethodInvoker)delegate
+                {
+                    try
+                    {
+                  pictureBox1.Invalidate();
+                    } catch(Exception e)
+                    {
+                        Debug.WriteLine(e.Message);
+                    }
+                });
+            }
+        }
+
+        void _Viewer_Loop_MouseUpdateEvent(Point tl, byte[] data)
+        {
+            var dt = DateTime.Now;
+            using(var ms = new MemoryStream(data))
+            {
+                var b = (Bitmap)Bitmap.FromStream(ms);
+                pictureBox1.Mouse_Image = b;
+                pictureBox1.Mouse_Position = tl;
+            }
+         //   Debug.WriteLine("_Viewer_Loop_MouseUpdateEvent (1): " + (DateTime.Now - dt).TotalMilliseconds + "ms");
+            if(pictureBox1.Image != null)
+            {
+                pictureBox1.Invoke((MethodInvoker)delegate
+                {
+                    try
+                    {
+                        pictureBox1.Invalidate();
+                    } catch(Exception e)
+                    {
+                        Debug.WriteLine(e.Message);
+                    }
+                });
+            }
+        }
+
+
+
+        private void Update_Image(Point p, byte[] m)
+        {
+            if(pictureBox1.Image != null)
+            {
+                pictureBox1.Invoke((MethodInvoker)delegate
+                {
+                    try
+                    {
+                        var dt = DateTime.Now;
+
+                        using(var memo = new MemoryStream(m))
+                        using(var imgregion = (Bitmap)Bitmap.FromStream(memo))
+                        using(var g = Graphics.FromImage(pictureBox1.Image))
+                        {
+                            g.DrawImage(imgregion, p);
+                        } 
+                      //  Debug.WriteLine("Update_Image (1): " + (DateTime.Now - dt).TotalMilliseconds + "ms");
+                        pictureBox1.Invalidate();
+                       // Debug.WriteLine("Update_Image (2): " + (DateTime.Now - dt).TotalMilliseconds + "ms");
+                       
+                    } catch(Exception e)
+                    {
+                        Debug.WriteLine(e.Message);
+                    }
+                });
+            }
+        }
+
+        private void New_Image(byte[] m)
+        {
+            pictureBox1.Invoke((MethodInvoker)delegate
+            {
+                try
+                {
+                    var dt = DateTime.Now;
+
+                    if(pictureBox1.Image != null)
+                        pictureBox1.Image.Dispose();
+                    using(var memo = new MemoryStream(m))
+                    {
+                        pictureBox1.Image = new Bitmap(memo);
+                    }
+
+                    pictureBox1.Invalidate();
+                  //  Debug.WriteLine("Update_Image: " + (DateTime.Now - dt).TotalMilliseconds + "ms");
+                } catch(Exception e)
+                {
+                    Debug.WriteLine(e.Message);
+                }
+            });
+        }
+
+
         private void Form1_DragEnter(object sender, DragEventArgs e)
         {
             // If the data is a file or a bitmap, display the copy cursor. 
@@ -57,45 +161,5 @@ namespace DesktopSharing
             _Viewer_Loop.Stop();
             Application.Exit();
         }
-        private void Update_Image(Point p, byte[] m)
-        {
-            pictureBox1.Invoke((MethodInvoker)delegate
-            {
-                try
-                {
-                    using(var memo = new MemoryStream(m))
-                    using(var imgregion = Bitmap.FromStream(memo))
-                    using(var g = Graphics.FromImage(pictureBox1.Image))
-                    {
-                        g.DrawImage(imgregion, p);
-                        g.Flush();
-                    }
-                    pictureBox1.Invalidate();
-                } catch(Exception e)
-                {
-                    Debug.WriteLine(e.Message);
-                }
-            });
-        }
-
-        private void New_Image(byte[] m)
-        {
-            pictureBox1.Invoke((MethodInvoker)delegate
-            {
-                try
-                {
-                    if(pictureBox1.Image != null)
-                        pictureBox1.Image.Dispose();
-                    using(var memo = new MemoryStream(m))
-                    {
-                        pictureBox1.Image = Bitmap.FromStream(memo);
-                    }
-                } catch(Exception e)
-                {
-                    Debug.WriteLine(e.Message);
-                }
-            });
-        }
-
     }
 }

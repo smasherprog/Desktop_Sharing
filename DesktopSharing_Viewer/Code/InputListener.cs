@@ -23,7 +23,7 @@ namespace DesktopSharing_Viewer.Code
         {
             Handle = handle;
             Keys_Down = new List<int>();
-            _LastMsg = _LastX = _LastY= _Lastwheel= 0;
+            _LastMsg = _LastX = _LastY = _Lastwheel = 0;
         }
 
         public bool PreFilterMessage(ref System.Windows.Forms.Message m)
@@ -55,7 +55,12 @@ namespace DesktopSharing_Viewer.Code
                             //Debug.WriteLine("KeyUP");
                             Keys_Down.Remove(temp);//else its an up, so remove it
                         }
-                        InputKeyEvent(temp, m.Msg == Desktop_Sharing_Shared.Keyboard.PInvoke.WM_KEYDOWN ? Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState.DOWN : Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState.UP);
+                        InputKeyEvent(new Desktop_Sharing_Shared.Keyboard.KeyboardEventStruct
+                        {
+                            bVk = temp,
+                            s = m.Msg == Desktop_Sharing_Shared.Keyboard.PInvoke.WM_KEYDOWN ? Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState.DOWN : Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState.UP
+                        });
+
                         return true;
                     }
 
@@ -78,13 +83,21 @@ namespace DesktopSharing_Viewer.Code
                     }
                     if(_LastMsg != m.Msg || p.X != _LastX || p.Y != _LastY || _Lastwheel != wheel)
                     {
-                        InputMouseEvent((Desktop_Sharing_Shared.Mouse.PInvoke.WinFormMouseEventFlags)m.Msg, p.X, p.Y, wheel);
+                        InputMouseEvent(new Desktop_Sharing_Shared.Mouse.MouseEventStruct
+                        {
+                            msg = (Desktop_Sharing_Shared.Mouse.PInvoke.WinFormMouseEventFlags)m.Msg,
+                            x = p.X,
+                            y = p.Y,
+                            wheel_delta = wheel
+
+                        });
+
                         _LastMsg = m.Msg;
                         p.X = _LastX;
                         p.Y = _LastY;
                         _Lastwheel = wheel;
                     }
-                    
+
                 }
                 // Debug.WriteLine("Mouse Event");
             }

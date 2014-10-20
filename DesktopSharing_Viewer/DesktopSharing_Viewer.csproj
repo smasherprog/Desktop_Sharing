@@ -49,6 +49,9 @@
     </Compile>
     <Compile Include="Code\InputListener.cs" />
     <Compile Include="Code\Viewer_Loop.cs" />
+    <Compile Include="Code\ViewPort.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Connect.cs">
       <SubType>Form</SubType>
     </Compile>

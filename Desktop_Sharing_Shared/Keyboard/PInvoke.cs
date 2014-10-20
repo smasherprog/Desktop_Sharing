@@ -6,7 +6,12 @@ using System.Text;
 
 namespace Desktop_Sharing_Shared.Keyboard
 {
-    public class PInvoke
+    public struct KeyboardEventStruct
+    {
+        public int bVk;
+        public Desktop_Sharing_Shared.Keyboard.PInvoke.PInvoke_KeyState s;
+    }
+    public static class PInvoke
     {
         public const int WM_KEYDOWN = 0x100;
         public const int WM_KEYUP = 0x101;
@@ -22,12 +27,12 @@ namespace Desktop_Sharing_Shared.Keyboard
             DOWN = 0
         }
 
-        public delegate void KeyEventHandler(int bVk, PInvoke_KeyState s);
-        public static void KeyEvent(int bVk, PInvoke_KeyState s)
+        public delegate void KeyEventHandler(KeyboardEventStruct k);
+        public static void KeyEvent(KeyboardEventStruct k)
         {
-            var scan = MapVirtualKey(bVk, 0);
+            var scan = MapVirtualKey(k.bVk, 0);
             //Console.WriteLine("Received " + bVk + " in state " + s +  "  scan code is " + scan);
-            keybd_event((byte)bVk, (byte)scan, (int)s, 0);
+            keybd_event((byte)k.bVk, (byte)scan, (int)k.s, 0);
         }
     }
 }

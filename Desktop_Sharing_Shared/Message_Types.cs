@@ -14,6 +14,8 @@ namespace Desktop_Sharing_Shared
         PING_ACK,
         KEY_EVENT,
         FOLDER,
-        FILE
+        FILE,
+        MOUSE_IMAGE_EVENT,
+        MOUSE_POSITION_EVENT
     }
 }
