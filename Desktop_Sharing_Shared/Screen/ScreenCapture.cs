@@ -16,7 +16,7 @@ namespace Desktop_Sharing_Shared.Screen
         IntPtr nSrce = IntPtr.Zero;
         IntPtr nDest = IntPtr.Zero;
         IntPtr nBmp = IntPtr.Zero;
-
+        private Size PreviousSize = new Size(0, 0);
 
         public ScreenCapture(long jpgquality = 60L)
         {
@@ -59,6 +59,12 @@ namespace Desktop_Sharing_Shared.Screen
                     nDest = PInvoke.CreateCompatibleDC(nSrce);
                 if(nBmp == IntPtr.Zero)
                     nBmp = PInvoke.CreateCompatibleBitmap(nSrce, sz.Width, sz.Height);
+                else if(sz.Height != PreviousSize.Height || sz.Width != PreviousSize.Width)
+                {// user changed resolution.. get new bitmap
+                    PInvoke.DeleteObject(nBmp);
+                    nBmp  = PInvoke.CreateCompatibleBitmap(nSrce, sz.Width, sz.Height);
+                }
+                PreviousSize = sz;
                 hOldBmp = PInvoke.SelectObject(nDest, nBmp);
 
                 bool b = PInvoke.BitBlt(nDest, 0, 0, sz.Width, sz.Height, nSrce, 0, 0, CopyPixelOperation.SourceCopy | CopyPixelOperation.CaptureBlt);
