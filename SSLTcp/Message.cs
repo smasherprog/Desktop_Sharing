@@ -18,19 +18,19 @@ namespace SecureTcp
             Blocks.Add(b);
         }
 
-        public void Add_Blocks(params byte[][] list )
+        public void Add_Blocks(params byte[][] list)
         {
             foreach(var item in list)
             {
                 Add_Block(item);
             }
-            
+
         }
         public long length
         {
             get
             {
-                var t= 4 + (Blocks.Count * 4);
+                var t = 4 + (Blocks.Count * 4);
                 foreach(var item in Blocks)
                     t += item.Length;
                 return t;
@@ -50,12 +50,12 @@ namespace SecureTcp
             {
                 Buffer.BlockCopy(b, curbuff, tempbuffer, 0, 4);
                 curbuff += 4;
-                var tmpbuf = new byte[ BitConverter.ToInt32(tempbuffer, 0)];
+                var tmpbuf = new byte[BitConverter.ToInt32(tempbuffer, 0)];
                 Buffer.BlockCopy(b, curbuff, tmpbuf, 0, tmpbuf.Length);
                 curbuff += tmpbuf.Length;
                 m.Add_Block(tmpbuf);
             }
-  
+
             return m;
         }
         public static byte[] ToBuffer(Tcp_Message m)
@@ -90,7 +90,7 @@ namespace SecureTcp
             }
 
             return numToRound + multiple - remainder;
-        }  
+        }
         public int Type
         {
             get

@@ -87,7 +87,7 @@ namespace DesktopSharing_Viewer.Code
 
             try
             {
-                using(var server = SecureTcp.Secure_Tcp_Client.Connect(Directory.GetCurrentDirectory() + "\\publickey.xml", IPtoConnect, 6000))
+                using(var server = SecureTcp.Secure_Tcp_Client.Connect(Directory.GetCurrentDirectory() + "\\publickey.xml", IPtoConnect, 443))
                 {
                     server.MessageReceivedEvent += server_MessageReceivedEvent;
                     server.BeginRead();

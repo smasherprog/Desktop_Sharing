@@ -85,6 +85,9 @@ namespace DesktopSharing_Server
             if(_MouseCapture != null)
                 _MouseCapture.Dispose();
             _MouseCapture = null;
+            if(_ScreenCapture != null)
+                _ScreenCapture.Dispose();
+            _ScreenCapture = null;
         }
         public byte[] RawScreen
         {
@@ -128,14 +131,15 @@ namespace DesktopSharing_Server
                         if(_RunningAsService && (DateTime.Now - LastDeskSwitch).TotalMilliseconds > 500)
                         {//only a program running as under the account     nt authority\system       is allowed to switch desktops
                             var d = _DesktopInfo.GetActiveDesktop();
+                            _ScreenCapture.ReleaseHandles();//make sure to release any handles before switching
                             if(d != _DesktopInfo.Current_Desktop)
                             {
                                 _DesktopInfo.SwitchDesktop(d);
                             }
                             LastDeskSwitch = DateTime.Now;
                         }
+                        dt = DateTime.Now;
                         var img = _ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
-
                         Debug.WriteLine("GetScreen time: " + (DateTime.Now - dt).TotalMilliseconds + "ms");
 
                         ScreenScanEvent.WaitOne();

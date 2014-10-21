@@ -18,9 +18,7 @@ namespace DesktopSharing_Server
 {
     public class ScreenCaptureService
     {
-        enum Status { Starting, Running, Stopped, ShuttingDown }
-        private Status Running = Status.Stopped;
-
+    
         //Receiver pipe = new Receiver();
 
         private Desktop_Service _Desktop_Service;
@@ -33,12 +31,12 @@ namespace DesktopSharing_Server
 
         public void OnStart()
         {
-            Running = Status.Starting;
+    
             _Desktop_Service = new Desktop_Service();
             _Desktop_Service.ScreenUpdateEvent += _Desktop_Service_ScreenUpdateEvent;
             _Desktop_Service.MouseImageChangedEvent += _Desktop_Service_MouseImageChangedEvent;
             _Desktop_Service.MousePositionChangedEvent += _Desktop_Service_MousePositionChangedEvent;
-            _Server = new TCP_Server(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + "\\privatekey.xml", 6000);
+            _Server = new TCP_Server(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + "\\privatekey.xml", 443);
             _Server.ReceiveEvent += _server_ReceiveEvent;
             _Server.NewClientEvent += _Server_NewClientEvent;
             _Server.DisconnectEvent += _Server_DisconnectEvent;
@@ -53,7 +51,7 @@ namespace DesktopSharing_Server
 
         public void OnStop()
         {
-            Running = Status.ShuttingDown;
+ 
             if(_Desktop_Service != null)
                 _Desktop_Service.Dispose();
             if(_Server != null)
@@ -64,7 +62,7 @@ namespace DesktopSharing_Server
         private void RunNetwork()
         {
             Console.WriteLine("Starting Network Thread");
-            Running = Status.Running;
+         
             try
             {
                 _Server.Start();
@@ -75,7 +73,6 @@ namespace DesktopSharing_Server
                 Debug.WriteLine(e.Message);
             }
 
-            Running = Status.Stopped;
             _Server.Stop();
             _Desktop_Service.Stop();
 
