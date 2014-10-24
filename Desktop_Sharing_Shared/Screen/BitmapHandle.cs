@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Desktop_Sharing_Shared.Mouse
+namespace Desktop_Sharing_Shared.Screen
 {
 
     public class BitmapHandle : IDisposable

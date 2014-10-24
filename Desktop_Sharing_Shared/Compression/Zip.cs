@@ -4,122 +4,49 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.IO.Packaging;
+using System.IO.Compression;
+using System.Diagnostics;
 
 namespace Desktop_Sharing_Shared.Compression
 {
-
-
-    public static class ZipHelper
+    public static class GZip
     {
-        public static void ZipFiles(string path, IEnumerable<string> files,
-               CompressionOption compressionLevel = CompressionOption.Normal)
+        public static byte[] Compress(byte[] raw)
         {
-            using(FileStream fileStream = new FileStream(path, FileMode.Create))
+            using(MemoryStream memory = new MemoryStream())
             {
-                ZipHelper.ZipFilesToStream(fileStream, files, compressionLevel);
-            }
-        }
-
-        public static byte[] ZipFilesToByteArray(IEnumerable<string> files,
-               CompressionOption compressionLevel = CompressionOption.Normal)
-        {
-            byte[] zipBytes = default(byte[]);
-            using(MemoryStream memoryStream = new MemoryStream())
-            {
-                ZipHelper.ZipFilesToStream(memoryStream, files, compressionLevel);
-                memoryStream.Flush();
-                zipBytes = memoryStream.ToArray();
-            }
-
-            return zipBytes;
-        }
-
-        public static void Unzip(string zipPath, string baseFolder)
-        {
-            using(FileStream fileStream = new FileStream(zipPath, FileMode.Open))
-            {
-                ZipHelper.UnzipFilesFromStream(fileStream, baseFolder);
-            }
-        }
-
-        public static void UnzipFromByteArray(byte[] zipData, string baseFolder)
-        {
-            using(MemoryStream memoryStream = new MemoryStream(zipData))
-            {
-                ZipHelper.UnzipFilesFromStream(memoryStream, baseFolder);
-            }
-        }
-
-        private static void ZipFilesToStream(Stream destination,
-                IEnumerable<string> files, CompressionOption compressionLevel)
-        {
-            using(Package package = Package.Open(destination, FileMode.Create))
-            {
-                foreach(string path in files)
+                using(GZipStream gzip = new GZipStream(memory, CompressionMode.Compress, true))
                 {
-                    // fix for white spaces in file names (by ErrCode)
-                    Uri fileUri = PackUriHelper.CreatePartUri(new Uri(@"/" +
-                                  Path.GetFileName(path), UriKind.Relative));
-                    string contentType = @"data/" + ZipHelper.GetFileExtentionName(path);
-
-                    using(Stream zipStream =
-                            package.CreatePart(fileUri, contentType, compressionLevel).GetStream())
+                    gzip.Write(raw, 0, raw.Length);
+                }
+                Debug.WriteLine("Compressed Before: " + raw.Length + " to: " + memory.Length);
+                return memory.ToArray();
+            }
+        }
+        public static byte[] Decompress(byte[] gzip)
+        {
+            // Create a GZIP stream with decompression mode.
+            // ... Then create a buffer and write into while reading from the GZIP stream.
+            using(GZipStream stream = new GZipStream(new MemoryStream(gzip), CompressionMode.Decompress))
+            {
+                const int size = 4096;
+                byte[] buffer = new byte[size];
+                using(MemoryStream memory = new MemoryStream())
+                {
+                    int count = 0;
+                    do
                     {
-                        using(FileStream fileStream = new FileStream(path, FileMode.Open))
+                        count = stream.Read(buffer, 0, size);
+                        if(count > 0)
                         {
-                           
-                            fileStream.CopyTo(zipStream);
+                            memory.Write(buffer, 0, count);
                         }
                     }
+                    while(count > 0);
+                    return memory.ToArray();
                 }
             }
         }
 
-        private static void UnzipFilesFromStream(Stream source, string baseFolder)
-        {
-            if(!Directory.Exists(baseFolder))
-            {
-                Directory.CreateDirectory(baseFolder);
-            }
-
-            using(Package package = Package.Open(source, FileMode.Open))
-            {
-                foreach(PackagePart zipPart in package.GetParts())
-                {
-                    // fix for white spaces in file names (by ErrCode)
-                    string path = Path.Combine(baseFolder,
-                         Uri.UnescapeDataString(zipPart.Uri.ToString()).Substring(1));
-
-                    using(Stream zipStream = zipPart.GetStream())
-                    {
-                        using(FileStream fileStream = new FileStream(path, FileMode.Create))
-                        {
-                            zipStream.CopyTo(fileStream);
-                        }
-                    }
-                }
-            }
-        }
-
-        private static string GetFileExtentionName(string path)
-        {
-            string extention = Path.GetExtension(path);
-            if(!string.IsNullOrEmpty(extention) && extention.StartsWith("."))
-            {
-                extention = extention.Substring(1);
-            }
-
-            return extention;
-        }
-        public static void CopyTo(this Stream input, Stream output)
-        {
-            byte[] buffer = new byte[16 * 1024]; // Fairly arbitrary size
-            int bytesRead;
-
-            while((bytesRead = input.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                output.Write(buffer, 0, bytesRead);
-            }
-        }
     }
 }

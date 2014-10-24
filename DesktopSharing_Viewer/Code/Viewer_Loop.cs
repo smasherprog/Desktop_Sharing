@@ -14,10 +14,10 @@ namespace DesktopSharing_Viewer.Code
         public System.Threading.Thread _Thread;
         public Status Running = Status.Stopped;
 
-        public delegate void UpdateImageHandler(Point tl, byte[] data);
+        public delegate void UpdateImageHandler(Rectangle tl, byte[] data);
         public event UpdateImageHandler UpdateImageEvent;
 
-        public delegate void NewImageHandler(byte[] data);
+        public delegate void NewImageHandler(Point sz, byte[] data);
         public event NewImageHandler NewImageEvent;
 
         public delegate void MousePositionChangedHandler(Point tl);
@@ -103,19 +103,25 @@ namespace DesktopSharing_Viewer.Code
             }
             Running = Status.Stopped;
         }
-
+        static int counter = 0;
         void server_MessageReceivedEvent(SecureTcp.Secure_Stream client, SecureTcp.Tcp_Message ms)
         {
             switch(ms.Type)
             {
                 case ((int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION):
                     {
-                        UpdateImageEvent(new Point(BitConverter.ToInt32(ms.Blocks[2], 0), BitConverter.ToInt32(ms.Blocks[1], 0)), ms.Blocks[3]);
+                        var r = new Rectangle();
+                        r.Y = BitConverter.ToInt32(ms.Blocks[1], 0);
+                        r.X = BitConverter.ToInt32(ms.Blocks[2], 0);
+                        r.Height = BitConverter.ToInt32(ms.Blocks[3], 0);
+                        r.Width = BitConverter.ToInt32(ms.Blocks[4], 0);
+
+                        UpdateImageEvent(r, Desktop_Sharing_Shared.Compression.GZip.Decompress(ms.Blocks[5]));
                         break;
                     }
                 case ((int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE):
                     {
-                        NewImageEvent(ms.Blocks[1]);
+                        NewImageEvent(new Point(BitConverter.ToInt32(ms.Blocks[2], 0), BitConverter.ToInt32(ms.Blocks[1], 0)), Desktop_Sharing_Shared.Compression.GZip.Decompress(ms.Blocks[3]));
                         break;
                     }
                 case ((int)Desktop_Sharing_Shared.Message_Types.MOUSE_IMAGE_EVENT):

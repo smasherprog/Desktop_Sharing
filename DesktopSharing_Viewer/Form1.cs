@@ -44,93 +44,77 @@ namespace DesktopSharing
 
             pictureBox1.Mouse_Position = tl;
 
-            if(pictureBox1.Image != null)
+
+            pictureBox1.Invoke((MethodInvoker)delegate
             {
-                pictureBox1.Invoke((MethodInvoker)delegate
+                try
                 {
-                    try
-                    {
-                  pictureBox1.Invalidate();
-                    } catch(Exception e)
-                    {
-                        Debug.WriteLine(e.Message);
-                    }
-                });
-            }
+                    pictureBox1.Invalidate();
+                } catch(Exception e)
+                {
+                    Debug.WriteLine(e.Message);
+                }
+            });
+
         }
 
         void _Viewer_Loop_MouseUpdateEvent(Point tl, byte[] data)
         {
-            var dt = DateTime.Now;
-            using(var ms = new MemoryStream(data))
+
+
+            pictureBox1.Invoke((MethodInvoker)delegate
             {
-                var b = (Bitmap)Bitmap.FromStream(ms);
-                pictureBox1.Mouse_Image = b;
-                pictureBox1.Mouse_Position = tl;
-            }
-         //   Debug.WriteLine("_Viewer_Loop_MouseUpdateEvent (1): " + (DateTime.Now - dt).TotalMilliseconds + "ms");
-            if(pictureBox1.Image != null)
-            {
-                pictureBox1.Invoke((MethodInvoker)delegate
+                try
                 {
-                    try
+                    var dt = DateTime.Now;
+                    using(var ms = new MemoryStream(data))
                     {
-                        pictureBox1.Invalidate();
-                    } catch(Exception e)
-                    {
-                        Debug.WriteLine(e.Message);
+                        var b = (Bitmap)Bitmap.FromStream(ms);
+                        pictureBox1.Mouse_Image = b;
+                        pictureBox1.Mouse_Position = tl;
                     }
-                });
-            }
+                    Debug.WriteLine("_Viewer_Loop_MouseUpdateEvent (1): " + (DateTime.Now - dt).TotalMilliseconds + "ms");
+                     pictureBox1.Invalidate();
+                } catch(Exception e)
+                {
+                    Debug.WriteLine(e.Message);
+                }
+            });
+
         }
 
 
 
-        private void Update_Image(Point p, byte[] m)
+        private void Update_Image(Rectangle p, byte[] m)
         {
-            if(pictureBox1.Image != null)
-            {
-                pictureBox1.Invoke((MethodInvoker)delegate
-                {
-                    try
-                    {
-                        var dt = DateTime.Now;
 
-                        using(var memo = new MemoryStream(m))
-                        using(var imgregion = (Bitmap)Bitmap.FromStream(memo))
-                        using(var g = Graphics.FromImage(pictureBox1.Image))
-                        {
-                            g.DrawImage(imgregion, p);
-                        } 
-                      //  Debug.WriteLine("Update_Image (1): " + (DateTime.Now - dt).TotalMilliseconds + "ms");
-                        pictureBox1.Invalidate();
-                       // Debug.WriteLine("Update_Image (2): " + (DateTime.Now - dt).TotalMilliseconds + "ms");
-                       
-                    } catch(Exception e)
-                    {
-                        Debug.WriteLine(e.Message);
-                    }
-                });
-            }
+            pictureBox1.Invoke((MethodInvoker)delegate
+            {
+                try
+                {
+                    var dt = new Stopwatch();
+                    dt.Start();
+                    pictureBox1.UpdateRegion(p, m);
+                    dt.Stop();
+                    Debug.WriteLine("Update_Image (1): " + dt.ElapsedMilliseconds);
+                    pictureBox1.Invalidate();
+                } catch(Exception e)
+                {
+                    Debug.WriteLine(e.Message);
+                }
+            });
+
         }
 
-        private void New_Image(byte[] m)
+        private void New_Image(Point sz, byte[] m)
         {
             pictureBox1.Invoke((MethodInvoker)delegate
             {
                 try
                 {
                     var dt = DateTime.Now;
-
-                    if(pictureBox1.Image != null)
-                        pictureBox1.Image.Dispose();
-                    using(var memo = new MemoryStream(m))
-                    {
-                        pictureBox1.Image = new Bitmap(memo);
-                    }
-
+                    pictureBox1.New_Image(sz, m);
                     pictureBox1.Invalidate();
-                  //  Debug.WriteLine("Update_Image: " + (DateTime.Now - dt).TotalMilliseconds + "ms");
                 } catch(Exception e)
                 {
                     Debug.WriteLine(e.Message);

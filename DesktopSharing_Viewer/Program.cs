@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -13,9 +14,15 @@ namespace DesktopSharing
         [STAThread]
         static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new DesktopSharing_Viewer.Connect());
+            try
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new DesktopSharing_Viewer.Connect());
+            } catch(Exception e)
+            {
+                Debug.WriteLine(e.Message);
+            }
         }
     }
 }

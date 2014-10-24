@@ -78,13 +78,17 @@ namespace DesktopSharing_Server
 
             Debug.WriteLine("Finished Network Thread");
         }
+        static int counter = 0;
         private void _Desktop_Service_ScreenUpdateEvent(byte[] data, Rectangle r)
         {
             var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.UPDATE_REGION);
             ms.Add_Block(BitConverter.GetBytes(r.Top));
             ms.Add_Block(BitConverter.GetBytes(r.Left));
-            ms.Add_Block(data);
+            ms.Add_Block(BitConverter.GetBytes(r.Height));
+            ms.Add_Block(BitConverter.GetBytes(r.Width));
+            ms.Add_Block(Desktop_Sharing_Shared.Compression.GZip.Compress(data));
             _Server.Send(ms);
+  
         }
         void _Desktop_Service_MousePositionChangedEvent(Point tl)
         {
@@ -102,8 +106,7 @@ namespace DesktopSharing_Server
             ms.Add_Block(data);
             _Server.Send(ms);
         }
-
-
+   
         void _Server_NewClientEvent(Secure_Stream client)
         {
             if(!_Desktop_Service.Capturing)
@@ -112,10 +115,14 @@ namespace DesktopSharing_Server
                 Thread.Sleep(200);//make sure to sleep long enough for the background service to start up and get an image if needed.
             }
             var ms = new Tcp_Message((int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE);
-            var tmp = _Desktop_Service.RawScreen;//make sure to get a copy
-            ms.Add_Block(tmp);
+            var tmp = _Desktop_Service._LastImage;//make sure to get a copy
+            ms.Add_Block(BitConverter.GetBytes(tmp.Dimensions.Height));
+            ms.Add_Block(BitConverter.GetBytes(tmp.Dimensions.Width));
+            ms.Add_Block(Desktop_Sharing_Shared.Compression.GZip.Compress(tmp.Data));
             Debug.WriteLine("Sending RESOLUTION_CHANGE image to client");
             client.Encrypt_And_Send(ms);
+
+   
         }
         private void _server_ReceiveEvent(Tcp_Message ms)
         {

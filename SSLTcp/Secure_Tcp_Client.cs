@@ -19,6 +19,7 @@ namespace SecureTcp
             var client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             client.ReceiveTimeout = 5000;
             client.NoDelay = true;
+            
             client.Connect(new IPEndPoint(IPAddress.Parse(ipaddr), port));
             var sessionkey = ExchangeKeys(key_location, client);
             if(sessionkey == null)

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Desktop_Sharing_Shared.Screen;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;

@@ -175,7 +175,7 @@ namespace SecureTcp
                         handler.Client.BeginSend(state.MessageBuffer, state.BytesCounter, state.MessageBuffer.Length - state.BytesCounter, 0, new AsyncCallback(SendMessageCallback), state);
                     } else
                     {
-                        // Debug.WriteLine("SendMessageCallback DONE");
+                       // Debug.WriteLine("SendMessageCallback DONE");
                        // _SendResetEvent.Set();
                     }
 
@@ -194,8 +194,15 @@ namespace SecureTcp
         public event MessageReceivedHandler MessageReceivedEvent;
         //starts the async background
         public void BeginRead()
+        {try
+            {
+                _BeginRead(this);
+            } catch(Exception e)
         {
-            _BeginRead(this);
+            if(DisconnectEvent != null)
+                DisconnectEvent(this);
+            Debug.WriteLine(e.Message);
+        }
         }
         private void _BeginRead(Secure_Stream c)
         {
@@ -278,7 +285,7 @@ namespace SecureTcp
 
                                 if(handler.MessageReceivedEvent != null)
                                     handler.MessageReceivedEvent(state.Client, Tcp_Message.FromBuffer(arrybuf));
-                                // Debug.WriteLine("ReadMessageCallback DONE");
+                                Debug.WriteLine("ReadMessageCallback DONE");
                             }
                         }
                     } else

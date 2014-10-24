@@ -17,8 +17,8 @@ namespace DesktopSharing_Server
         private bool _Running = false;
 
         private ScreenCapture _ScreenCapture;
-        private Bitmap _LastImage = null;
-        private object _LastImageLock = new object();
+        public Raw_Image _LastImage = null;
+
         private bool _RunningAsService = false;
         private Desktop_Sharing_Shared.Desktop.DesktopInfo _DesktopInfo;
 
@@ -35,7 +35,7 @@ namespace DesktopSharing_Server
         private DateTime LastDeskSwitch = DateTime.Now.AddDays(-10);
 
         public bool Capturing = false;
-        public Desktop_Service(int updateinterval = 50)
+        public Desktop_Service(int updateinterval = 100)
         {
             _RunningAsService = System.Security.Principal.WindowsIdentity.GetCurrent().Name.ToLower().Contains(@"nt authority\system");
             _Intervalms = updateinterval;
@@ -76,8 +76,8 @@ namespace DesktopSharing_Server
         public void Stop()
         {
             _Running = false;
-            if(_LastImage != null)
-                _LastImage.Dispose();
+            //if(_LastImage != null)
+            //    _LastImage.Dispose();
             _LastImage = null;
             if(_DesktopInfo != null)
                 _DesktopInfo.Dispose();
@@ -89,27 +89,7 @@ namespace DesktopSharing_Server
                 _ScreenCapture.Dispose();
             _ScreenCapture = null;
         }
-        public byte[] RawScreen
-        {
-            get
-            {
-                try
-                {
-                    var mes = new MemoryStream();
-                    lock(_LastImageLock)
-                    {
-                        _LastImage.Save(mes, _ScreenCapture._jgpEncoder, _ScreenCapture._myEncoderParameters);
-                    }
-                    var b = mes.ToArray();
-                    mes.Dispose();
-                    return b;
-                } catch(Exception e)
-                {
-                    Debug.WriteLine(e.Message);
-                }
-                return new byte[0];
-            }
-        }
+  
         private void _Start()
         {
 
@@ -122,7 +102,8 @@ namespace DesktopSharing_Server
                         Thread.Sleep(10);
                         continue;
                     }
-                    var dt = DateTime.Now;
+                    System.Diagnostics.Stopwatch SW = new Stopwatch();
+                    SW.Start();
                     _MouseCapture.Update();
 
                     if((DateTime.Now - LastScreenUpdate).TotalMilliseconds > _Intervalms)
@@ -138,13 +119,27 @@ namespace DesktopSharing_Server
                             }
                             LastDeskSwitch = DateTime.Now;
                         }
-                        dt = DateTime.Now;
+                        SW.Stop();
                         var img = _ScreenCapture.GetScreen(new Size(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
-                        Debug.WriteLine("GetScreen time: " + (DateTime.Now - dt).TotalMilliseconds + "ms");
-
-                        ScreenScanEvent.WaitOne();
-                        System.Threading.ThreadPool.QueueUserWorkItem(new WaitCallback(ScreenUpdate_ThreadProc), img);
-
+                
+                        Debug.WriteLine("GetScreen time: " + SW.ElapsedMilliseconds +"ms");
+                        SW.Start();
+                        Rectangle rect = Desktop_Sharing_Shared.Bitmap_Helper.Get_Diff(_LastImage, img);
+                        _LastImage = img;
+                        if(rect.Width > 0 && rect.Height > 0)
+                        {
+                            var rawimg = new Raw_Image
+                            {
+                                Data = Desktop_Sharing_Shared.Bitmap_Helper.Copy(img, rect),
+                                Dimensions = rect
+                            };
+                            SW.Stop();
+             
+                            Debug.WriteLine("GetScreen Copy time: " + SW.ElapsedMilliseconds + "ms");
+                            SW.Start();
+                            ScreenScanEvent.WaitOne();
+                            System.Threading.ThreadPool.QueueUserWorkItem(new WaitCallback(ScreenUpdate_ThreadProc), rawimg);
+                        }
                         LastScreenUpdate = DateTime.Now;
                     }
 
@@ -158,11 +153,10 @@ namespace DesktopSharing_Server
                         _MouseEvents.Clear();
 
                     }
-                    var timespend = (int)(DateTime.Now - dt).TotalMilliseconds;
-                    Debug.WriteLine("Time to do screen work: " + timespend + "ms");
+                    SW.Stop();
+                    Debug.WriteLine("Time to do screen work: " + SW.ElapsedMilliseconds + "ms");
                     Thread.Sleep(10);
-                } 
-                catch(Exception e)
+                } catch(Exception e)
                 {
                     Console.WriteLine(e.ToString());
                 }
@@ -171,37 +165,20 @@ namespace DesktopSharing_Server
         }
         public void ScreenUpdate_ThreadProc(object i)
         {
-            var dt = DateTime.Now;
+            System.Diagnostics.Stopwatch SW = new Stopwatch();
+            SW.Start();
             try
             {
-                var img = (Bitmap)i;
-                Rectangle rect;
-                byte[] arr = null;
-                lock(_LastImageLock)
-                {
-                    rect = Desktop_Sharing_Shared.Bitmap_Helper.Get_Diff(_LastImage, img);
-                    _LastImage.Dispose();
-                    _LastImage = img;
-                    if(rect.Width > 0 && rect.Height > 0)
-                    {
-                        using(var updateregion = img.Clone(rect, img.PixelFormat))
-                        {
-                            using(var memorys = new MemoryStream())
-                            {
-                                updateregion.Save(memorys, _ScreenCapture._jgpEncoder, _ScreenCapture._myEncoderParameters);
-                                arr = memorys.ToArray();
-                            }
-                        }
-                    }
-                }
-                if(ScreenUpdateEvent != null && arr != null)
-                    ScreenUpdateEvent(arr, rect);
+                var r = (Raw_Image)i;
+                if(ScreenUpdateEvent != null)
+                    ScreenUpdateEvent(r.Data, r.Dimensions);
 
             } catch(Exception e)
             {
                 Debug.WriteLine(e.Message);
             }
-            Debug.WriteLine("ScreenUpdate_ThreadProc time: " + (DateTime.Now - dt).TotalMilliseconds + "ms");
+            SW.Stop();
+            Debug.WriteLine("ScreenUpdate_ThreadProc time: " + SW.ElapsedMilliseconds);
             ScreenScanEvent.Set();
         }
         public void KeyEvent(Desktop_Sharing_Shared.Keyboard.KeyboardEventStruct k)
