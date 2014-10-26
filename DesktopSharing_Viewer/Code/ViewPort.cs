@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -69,9 +70,27 @@ namespace DesktopSharing_Viewer.Code
         //}
         public void New_Image(Point sz, byte[] m)
         {
-            var timg =  new Bitmap(sz.X, sz.Y, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
-             Desktop_Sharing_Shared.Bitmap_Helper.Fill(timg, sz, m);
-             Image = timg;
+            using(var ms = new MemoryStream(m))
+            {
+                Image = new Bitmap(ms);
+            }
+            
+
+             //Desktop_Sharing_Shared.Bitmap_Helper.Fill(timg, sz, m);
+
+             //unsafe
+             //{
+             //    fixed(byte* datb = m)
+             //    {
+             //        using(Bitmap image = new Bitmap(sz.X, sz.Y, sz.X * 4,
+             //                 System.Drawing.Imaging.PixelFormat.Format32bppRgb, new IntPtr(datb)))
+             //        {
+
+             //            image.Save(@"C:\Users\scott\Desktop\text.png", System.Drawing.Imaging.ImageFormat.Png);
+             //        }
+             //    }
+             //}
+           
 
         }
         public ViewPort()
@@ -80,10 +99,10 @@ namespace DesktopSharing_Viewer.Code
             this.SetStyle(ControlStyles.Selectable, true);
             MouseEnter += ViewPort_MouseEnter;
             MouseLeave += ViewPort_MouseLeave;
-            SetStyle(ControlStyles.AllPaintingInWmPaint, true);
-            SetStyle(ControlStyles.ContainerControl, false);
-            SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
-            SetStyle(ControlStyles.Opaque, true);
+            //SetStyle(ControlStyles.AllPaintingInWmPaint, true);
+            //SetStyle(ControlStyles.ContainerControl, false);
+            //SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+            //SetStyle(ControlStyles.Opaque, true);
 
         }
         void ViewPort_MouseLeave(object sender, EventArgs e)
@@ -105,6 +124,7 @@ namespace DesktopSharing_Viewer.Code
             // Don't paint background
         }
         static int counter = 0;
+        DateTime date = DateTime.Now;
         protected override void OnPaint(PaintEventArgs e)
         {
             var dt = new Stopwatch();
@@ -136,10 +156,18 @@ namespace DesktopSharing_Viewer.Code
             //    dt.Stop();
             //    Debug.WriteLine("OnPaint (1): " + dt.ElapsedMilliseconds);
             //}
+            int updates = 0;
             try
             {
 
-
+                if((DateTime.Now - date).TotalMilliseconds > 1000)
+                {
+                    date = DateTime.Now;
+                    Debug.WriteLine("fps: " + counter);
+                    counter = 0;
+                }
+                counter++;
+                
                 if(_Image != null)
                 {
                     var tmpimgs = new List<Raw_Image>();
@@ -152,27 +180,15 @@ namespace DesktopSharing_Viewer.Code
                     e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Low;
                     e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Default;
                     e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
-         
+                    updates = tmpimgs.Count();
+
                     Desktop_Sharing_Shared.Bitmap_Helper.Copy(tmpimgs, _Image);
-       
+
                     e.Graphics.DrawImageUnscaled(_Image, new Point(0, 0));
                     if(Mouse_Image != null)
                         e.Graphics.DrawImageUnscaled(Mouse_Image, Mouse_Position);
-            
-                    //Graphics g = e.Graphics;
-                    //using(var hbm = new Desktop_Sharing_Shared.Screen.BitmapHandle(_Image.GetHbitmap()))
-                    //{
 
-                    //    IntPtr sdc = g.GetHdc();
-                    //    IntPtr hdc = Desktop_Sharing_Shared.Screen.PInvoke.CreateCompatibleDC(sdc);
-                    //    var old = Desktop_Sharing_Shared.Screen.PInvoke.SelectObject(hdc, hbm.Handle);
 
-                    //    Desktop_Sharing_Shared.Screen.PInvoke.BitBlt(sdc, 0, 0, _Image.Width, _Image.Height, hdc, 0, 0, CopyPixelOperation.SourceCopy);
-                    //    Desktop_Sharing_Shared.Screen.PInvoke.SelectObject(hdc, old);
-                    //    Desktop_Sharing_Shared.Screen.PInvoke.DeleteDC(hdc);
-                    //    g.ReleaseHdc(sdc);
-
-                    //}
                     //dt.Stop();
                     //Debug.WriteLine("GDI write (1): " + dt.ElapsedMilliseconds);
                     //dt.Start();
@@ -182,7 +198,7 @@ namespace DesktopSharing_Viewer.Code
                 Debug.WriteLine(ex.Message);
             }
             dt.Stop();
-            Debug.WriteLine("OnPaint (1): " + dt.ElapsedMilliseconds);
+            Debug.WriteLine("OnPaint (1): " + dt.ElapsedMilliseconds + "  frames: " + updates);
 
         }
     }

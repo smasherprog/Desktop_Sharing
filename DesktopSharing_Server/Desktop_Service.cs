@@ -136,7 +136,7 @@ namespace DesktopSharing_Server
                             SW.Stop();
              
                             Debug.WriteLine("GetScreen Copy time: " + SW.ElapsedMilliseconds + "ms");
-                            SW.Start();
+                       
                             ScreenScanEvent.WaitOne();
                             System.Threading.ThreadPool.QueueUserWorkItem(new WaitCallback(ScreenUpdate_ThreadProc), rawimg);
                         }
@@ -153,8 +153,7 @@ namespace DesktopSharing_Server
                         _MouseEvents.Clear();
 
                     }
-                    SW.Stop();
-                    Debug.WriteLine("Time to do screen work: " + SW.ElapsedMilliseconds + "ms");
+             
                     Thread.Sleep(10);
                 } catch(Exception e)
                 {

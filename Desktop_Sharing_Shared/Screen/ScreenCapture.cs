@@ -74,7 +74,7 @@ namespace Desktop_Sharing_Shared.Screen
 
                 bi.bmiHeader.biSize = 40;
                 bi.bmiHeader.biWidth = sz.Width;
-                bi.bmiHeader.biHeight = sz.Height;
+                bi.bmiHeader.biHeight = -sz.Height;
                 bi.bmiHeader.biPlanes = 1;
                 bi.bmiHeader.biBitCount = 32;
                 bi.bmiHeader.biCompression = Desktop_Sharing_Shared.Screen.PInvoke.BitmapCompressionMode.BI_RGB;
@@ -88,7 +88,18 @@ namespace Desktop_Sharing_Shared.Screen
                 raw.Dimensions = new Rectangle(0, 0, sz.Width, sz.Height);
 
                 Desktop_Sharing_Shared.Screen.PInvoke.GetDIBits(nSrce, nBmp, 0, Convert.ToUInt32(sz.Height), raw.Data, ref bi, PInvoke.DIB_Color_Mode.DIB_RGB_COLORS);
+                //unsafe
+                //{
+                //    fixed(byte* datb = raw.Data)
+                //    {
+                //        using(Bitmap image = new Bitmap(sz.Width, sz.Height, sz.Width * 4,
+                //                 PixelFormat.Format32bppRgb, new IntPtr(datb)))
+                //        {
 
+                //            image.Save(@"C:\Users\scott\Desktop\text.png", ImageFormat.Png);
+                //        }
+                //    }
+                //}
                 //Bitmap bmp = Bitmap.FromHbitmap(nBmp);
                 PInvoke.SelectObject(nDest, hOldBmp);
 

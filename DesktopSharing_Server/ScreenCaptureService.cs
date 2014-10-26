@@ -18,7 +18,7 @@ namespace DesktopSharing_Server
 {
     public class ScreenCaptureService
     {
-    
+
         //Receiver pipe = new Receiver();
 
         private Desktop_Service _Desktop_Service;
@@ -31,7 +31,7 @@ namespace DesktopSharing_Server
 
         public void OnStart()
         {
-    
+
             _Desktop_Service = new Desktop_Service();
             _Desktop_Service.ScreenUpdateEvent += _Desktop_Service_ScreenUpdateEvent;
             _Desktop_Service.MouseImageChangedEvent += _Desktop_Service_MouseImageChangedEvent;
@@ -51,7 +51,7 @@ namespace DesktopSharing_Server
 
         public void OnStop()
         {
- 
+
             if(_Desktop_Service != null)
                 _Desktop_Service.Dispose();
             if(_Server != null)
@@ -62,7 +62,7 @@ namespace DesktopSharing_Server
         private void RunNetwork()
         {
             Console.WriteLine("Starting Network Thread");
-         
+
             try
             {
                 _Server.Start();
@@ -86,9 +86,27 @@ namespace DesktopSharing_Server
             ms.Add_Block(BitConverter.GetBytes(r.Left));
             ms.Add_Block(BitConverter.GetBytes(r.Height));
             ms.Add_Block(BitConverter.GetBytes(r.Width));
-            ms.Add_Block(Desktop_Sharing_Shared.Compression.GZip.Compress(data));
+
+
+            byte[] imgbytes;
+            using(var msout = new MemoryStream())
+            {
+                unsafe
+                {
+                    fixed(byte* datb = data)
+                    {
+                        using(Bitmap image = new Bitmap(r.Width, r.Height, r.Width * 4, PixelFormat.Format32bppRgb, new IntPtr(datb)))
+                        {
+                            image.Save(msout, ImageFormat.Png);
+                            imgbytes = msout.ToArray();
+   
+                        }
+                    }
+                }
+            }
+            ms.Add_Block(imgbytes);
             _Server.Send(ms);
-  
+
         }
         void _Desktop_Service_MousePositionChangedEvent(Point tl)
         {
@@ -106,7 +124,7 @@ namespace DesktopSharing_Server
             ms.Add_Block(data);
             _Server.Send(ms);
         }
-   
+
         void _Server_NewClientEvent(Secure_Stream client)
         {
             if(!_Desktop_Service.Capturing)
@@ -118,11 +136,25 @@ namespace DesktopSharing_Server
             var tmp = _Desktop_Service._LastImage;//make sure to get a copy
             ms.Add_Block(BitConverter.GetBytes(tmp.Dimensions.Height));
             ms.Add_Block(BitConverter.GetBytes(tmp.Dimensions.Width));
-            ms.Add_Block(Desktop_Sharing_Shared.Compression.GZip.Compress(tmp.Data));
-            Debug.WriteLine("Sending RESOLUTION_CHANGE image to client");
-            client.Encrypt_And_Send(ms);
 
-   
+            byte[] imgbytes;
+            using(var msout = new MemoryStream())
+            {
+                unsafe
+                {
+                    fixed(byte* datb = tmp.Data)
+                    {
+                        using(Bitmap image = new Bitmap(tmp.Dimensions.Width, tmp.Dimensions.Height, tmp.Dimensions.Width * 4, PixelFormat.Format32bppRgb, new IntPtr(datb)))
+                        {
+                            image.Save(msout, ImageFormat.Png);
+                            imgbytes = msout.ToArray();
+
+                        }
+                    }
+                }
+            }
+            ms.Add_Block(imgbytes);
+            client.Encrypt_And_Send(ms);
         }
         private void _server_ReceiveEvent(Tcp_Message ms)
         {

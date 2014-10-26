@@ -116,12 +116,12 @@ namespace DesktopSharing_Viewer.Code
                         r.Height = BitConverter.ToInt32(ms.Blocks[3], 0);
                         r.Width = BitConverter.ToInt32(ms.Blocks[4], 0);
 
-                        UpdateImageEvent(r, Desktop_Sharing_Shared.Compression.GZip.Decompress(ms.Blocks[5]));
+                        UpdateImageEvent(r, ms.Blocks[5]);
                         break;
                     }
                 case ((int)Desktop_Sharing_Shared.Message_Types.RESOLUTION_CHANGE):
                     {
-                        NewImageEvent(new Point(BitConverter.ToInt32(ms.Blocks[2], 0), BitConverter.ToInt32(ms.Blocks[1], 0)), Desktop_Sharing_Shared.Compression.GZip.Decompress(ms.Blocks[3]));
+                        NewImageEvent(new Point(BitConverter.ToInt32(ms.Blocks[2], 0), BitConverter.ToInt32(ms.Blocks[1], 0)),ms.Blocks[3]);
                         break;
                     }
                 case ((int)Desktop_Sharing_Shared.Message_Types.MOUSE_IMAGE_EVENT):

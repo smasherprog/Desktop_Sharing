@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -211,32 +212,32 @@ namespace Desktop_Sharing_Shared
                 return;
             try
             {
-          
-                var dstrect = new Rectangle(0, 0, dst.Width, dst.Height);
-                var dstDataB = dst.LockBits(dstrect, ImageLockMode.WriteOnly, dst.PixelFormat);
-          
+
+                var dstDataB = dst.LockBits(new Rectangle(0, 0, dst.Width, dst.Height), ImageLockMode.WriteOnly, dst.PixelFormat);
                 unsafe
                 {
                     foreach(var item in src_imgs)
                     {
-
-                        fixed(byte* src = item.Data)
+                        using(var ms = new MemoryStream(item.Data))
+                        using(Bitmap image = new Bitmap(ms))
                         {
-                            var srcrowstride = Convert.ToUInt64(item.Dimensions.Width * 4);
+                            var srcdata = image.LockBits(new Rectangle(0, 0, item.Dimensions.Width, item.Dimensions.Height), ImageLockMode.ReadOnly, image.PixelFormat);
 
                             byte* pPixelsB = (byte*)dstDataB.Scan0.ToPointer();
+                            byte* src = (byte*)srcdata.Scan0.ToPointer();
+
                             for(int y = 0; y < item.Dimensions.Height; y++)
                             {
-                                var srcrow = src + (item.Dimensions.Width * 4 * y);
-
+                                var srcrow = src + (srcdata.Stride * y);
                                 var dstrow = (pPixelsB + (dstDataB.Stride * (y + item.Dimensions.Top))) + (item.Dimensions.Left * 4);
-
-                                Desktop_Sharing_Shared.Utilities.PInvoke.CopyMemory(dstrow, srcrow, srcrowstride);
+                                Desktop_Sharing_Shared.Utilities.PInvoke.CustomCopy(dstrow, srcrow, item.Dimensions.Width * 4);
                             }
+                            image.UnlockBits(srcdata);
                         }
+
                     }
                 }
-              
+
                 dst.UnlockBits(dstDataB);
             } catch(Exception e)
             {
@@ -269,7 +270,7 @@ namespace Desktop_Sharing_Shared
             {
                 var dstrect = new Rectangle(0, 0, dst.Width, dst.Height);
                 var dstDataB = dst.LockBits(dstrect, ImageLockMode.WriteOnly, dst.PixelFormat);
-    
+
                 unsafe
                 {
                     fixed(byte* src = m)
@@ -279,7 +280,7 @@ namespace Desktop_Sharing_Shared
                         for(int y = 0; y < sz.Y; y++)
                         {
                             var srcrow = src + (srcrowstride * y);
-                            var dstrow = pPixelsB +( dstDataB.Stride *y);
+                            var dstrow = pPixelsB + (dstDataB.Stride * y);
                             Desktop_Sharing_Shared.Utilities.PInvoke.CustomCopy(dstrow, srcrow, srcrowstride);
                         }
 
@@ -287,7 +288,7 @@ namespace Desktop_Sharing_Shared
                 }
 
                 dst.UnlockBits(dstDataB);
-       
+
             } catch(Exception e)
             {
                 Debug.WriteLine(e.Message);

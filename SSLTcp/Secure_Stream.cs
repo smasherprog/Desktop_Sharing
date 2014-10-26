@@ -285,7 +285,7 @@ namespace SecureTcp
 
                                 if(handler.MessageReceivedEvent != null)
                                     handler.MessageReceivedEvent(state.Client, Tcp_Message.FromBuffer(arrybuf));
-                                Debug.WriteLine("ReadMessageCallback DONE");
+                               // Debug.WriteLine("ReadMessageCallback DONE");
                             }
                         }
                     } else
